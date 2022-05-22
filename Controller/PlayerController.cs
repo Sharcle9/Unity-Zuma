@@ -53,7 +53,7 @@ public class PlayerController : MonoBehaviour
 
         if (Input.GetButtonDown("Fire1"))
         {
-            Debug.Log(rotationRad);
+            // Debug.Log(rotationRad);
         }
         
     }

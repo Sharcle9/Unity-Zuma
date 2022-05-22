@@ -26,7 +26,7 @@ public class GameManager : MonoBehaviour
     private TargetBall InstanceTargetBallFunc()
     {
         GameObject targetBall = Instantiate(targetBallPrefab, transform.Find("TargetBalls"));
-        targetBall.SetActive(false);
+        targetBall.SetActive(true);
         TargetBall targetBallClass = targetBall.AddComponent<TargetBall>();
         return targetBallClass;
     }
