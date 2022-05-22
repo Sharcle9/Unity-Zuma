@@ -3,22 +3,24 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 using System;
+using UnityEditor;
 
 public class BezierPathController : MonoBehaviour
 {
 
     public GameObject targetBallPrefab;
     public int segmentPerCurve;
-    public List<GameObject> ControllerPointList = new List<GameObject>();
-    public List<Vector3> TargetBallPointList = new List<Vector3>();
+    private List<GameObject> ControllerPointList = new List<GameObject>();
+    private List<Vector3> TargetBallPointList = new List<Vector3>();
+    public float diameter = 0.9f;
 
-    public bool isShowDrawing = true;
+    public bool isShowDrawing = false;
 
     private void Awake()
     {
         foreach (var item in TargetBallPointList)
         {
-            GameObject targetBall = Instantiate(targetBallPrefab, GameObject.Find("TargetBalls").transform);
+            GameObject targetBall = Instantiate(targetBallPrefab, GameObject.Find("Orange_0").transform);
             targetBall.transform.position = item;
         }
     }
@@ -41,7 +43,7 @@ public class BezierPathController : MonoBehaviour
 
         for (int k = 0; k < pointsOnCurve.Count; k++)
         {
-            if (Vector3.Distance(startPoint, pointsOnCurve[k]) >= 0.42f)
+            if (Vector3.Distance(startPoint, pointsOnCurve[k]) >= diameter)
             {
                 startPoint = pointsOnCurve[k];
                 TargetBallPointList.Add(startPoint);
@@ -59,7 +61,7 @@ public class BezierPathController : MonoBehaviour
 
         foreach (var item in TargetBallPointList)
         {
-            Gizmos.DrawSphere(item, 0.21f);
+            Gizmos.DrawSphere(item, diameter / 2);
         }
 
         Gizmos.color = Color.blue;
@@ -102,6 +104,34 @@ public class BezierPathController : MonoBehaviour
     private Vector3 BezierCubicFormula(float t, Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3)
     {
         return p0 * Mathf.Pow((1 - t), 3) + 3 * p1 * t * Mathf.Pow((1 - t), 2) + 3 * p2 * Mathf.Pow(t, 2) * (1 - t) + p3 * Mathf.Pow(t, 3);
+    }
+
+    [CustomEditor(typeof(BezierPathController))]
+    public class BezierEditor : Editor
+    {
+        public override void OnInspectorGUI()
+        {
+            base.OnInspectorGUI();
+
+            if (GUILayout.Button("Generate Map"))
+            {
+                (target as BezierPathController).CreateMapAssets();
+            }
+        }
+    }
+
+    public void CreateMapAssets()
+    {
+        string assetsSavePath = "Assets/Maps/map.asset";
+        MapConfig mapConfig = new MapConfig();
+
+        foreach (var item in TargetBallPointList)
+        {
+            mapConfig.TargetBallPointList.Add(item);
+        }
+
+        AssetDatabase.CreateAsset(mapConfig, assetsSavePath);
+        AssetDatabase.SaveAssets();
     }
 
     // Start is called before the first frame update

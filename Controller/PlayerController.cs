@@ -20,6 +20,12 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
         FollowCursor();
+
+        if (Input.GetButtonDown("Fire1"))
+        {
+            LaunchBall();
+        }
+        
     }
 
     private void FollowCursor()
@@ -50,5 +56,10 @@ public class PlayerController : MonoBehaviour
             Debug.Log(rotationRad);
         }
         
+    }
+
+    private void LaunchBall()
+    {
+
     }
 }
