@@ -62,4 +62,11 @@ public class PlayerController : MonoBehaviour
     {
 
     }
+
+    public void ToGameObject()
+    {
+        GameObject gameObject = new GameObject("Unspecified Ball");
+        SpriteRenderer spriteRenderer = gameObject.AddComponent<SpriteRenderer>();
+
+    }
 }

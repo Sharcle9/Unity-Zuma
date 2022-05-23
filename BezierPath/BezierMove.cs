@@ -42,7 +42,7 @@ public class BezierMove : MonoBehaviour
         if (t >= 1)
         {
             t = 0;
-            Debug.Log("t = " + t);
+            // Debug.Log("t = " + t);
             currentCurveIndex++;
             curvesRemaining--;
         }
@@ -92,7 +92,7 @@ public class BezierMove : MonoBehaviour
 
     private Vector2 GetBezierPoint(float t, Transform route, int currentCurveIndex)
     {
-        Debug.Log(currentCurveIndex);
+        // Debug.Log(currentCurveIndex);
         int vertex0 = currentCurveIndex * 3;
         int vertex1 = currentCurveIndex * 3 + 1;
         int vertex2 = currentCurveIndex * 3 + 2;
