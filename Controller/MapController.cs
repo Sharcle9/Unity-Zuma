@@ -2,17 +2,23 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class BallController : MonoBehaviour
+public class MapController : MonoBehaviour
 {
     static int ballType = 0;
     public GameObject[] BallPrefabs;
+    public MapData mapData;
+
+    public MapController(MapData mapData)
+    {
+        this.mapData = mapData;
+    }
 
     public BallType GenerateBall()
     {
         return (BallType) ballType;
     }
 
-    public void GenerateOneBall()
+    public void GenerateBallOnClick()
     {
         Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         float x = mousePos.x;
@@ -23,11 +29,17 @@ public class BallController : MonoBehaviour
         ballObject.name = "ball";
     }
 
+    public void GenerateQueue(int count)
+    {
+        BallQueue ballQueue = gameObject.AddComponent<BallQueue>();
+    }
+
     private void Update()
     {
         if (Input.GetButtonDown("Fire1"))
         {
-            GenerateOneBall();
+            GenerateBallOnClick();
         }
     }
+
 }
