@@ -5,9 +5,8 @@ using UnityEngine;
 public class BallQueue : MonoBehaviour
 {
     public int length = 5; 
-    public Transform route;
-    public GameObject[] BallPrefabs;
-    private GameObject[] Balls;
+    private Transform route;
+    private GameObject[] BallPrefabs;
 
     public float speedMultiplier = 1f;
     private int curvesRemaining;
@@ -15,6 +14,8 @@ public class BallQueue : MonoBehaviour
     private float stepSize = 0.005f;
     private float tStepSize = 0.001f;
     private float ballRadius = 0.42f;
+
+    private PrefabController prefabController;
 
     private void Start()
     {
@@ -30,13 +31,17 @@ public class BallQueue : MonoBehaviour
 
     public void Init()
     {
+
+        prefabController = new PrefabController();
+        BallPrefabs = prefabController.BallPrefabs;
+        route = prefabController.route;
+
         InitParamSetUp();
 
-        Balls = new GameObject[5];
         GameObject prevBall = null;
         for (int i = 0; i < length; i++)
         {
-            GameObject ball = Instantiate(BallPrefabs[3], this.transform);
+            GameObject ball = Instantiate(BallPrefabs[4], this.transform);
             ball.AddComponent<Ball>();
             ball.GetComponent<Ball>().Init(0, speedMultiplier, 0, curvesRemaining, stepSize, tStepSize, route, i == 0, ballRadius);
 

@@ -4,21 +4,29 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    public Transform tf;
-
     /* sprite rotation correction, if any */
-    public float additionalRotationRad;
+    public float additionalRotationRad = 0.785f;
+
+    public Vector2 playerPos = new Vector2(0f, 0f);
+
+    private PrefabController prefabController;
+    private GameObject[] BallPrefabs;
+    private int ballType = 3;
+    private Vector2 mousePos;
 
 
     // Start is called before the first frame update
     void Start()
     {
-        
+        transform.position = playerPos;
+        prefabController = new PrefabController();
+        BallPrefabs = prefabController.BallPrefabs;
     }
 
     // Update is called once per frame
     void Update()
     {
+        mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         FollowCursor();
 
         if (Input.GetButtonDown("Fire1"))
@@ -30,7 +38,6 @@ public class PlayerController : MonoBehaviour
 
     private void FollowCursor()
     {
-        Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         float x = mousePos.x;
         float y = mousePos.y;
 
@@ -49,7 +56,7 @@ public class PlayerController : MonoBehaviour
             rotationRad = (float) System.Math.Atan(x / y) + (y > 0 ? 0 : Mathf.PI);
         }
 
-        tf.rotation = Quaternion.Euler(0, 0, - (rotationRad + additionalRotationRad) * Mathf.Rad2Deg);
+        transform.rotation = Quaternion.Euler(0, 0, - (rotationRad + additionalRotationRad) * Mathf.Rad2Deg);
 
         if (Input.GetButtonDown("Fire1"))
         {
@@ -60,7 +67,10 @@ public class PlayerController : MonoBehaviour
 
     private void LaunchBall()
     {
-
+        GameObject ball = Instantiate(BallPrefabs[ballType], this.transform.parent.transform);
+        ball.transform.rotation = this.transform.rotation;
+        ball.AddComponent<Ball>();
+        ball.GetComponent<Ball>().Init(this.transform.position, mousePos, true);
     }
 
     public void ToGameObject()

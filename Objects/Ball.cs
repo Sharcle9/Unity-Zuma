@@ -7,13 +7,13 @@ public class Ball : MonoBehaviour
     public GameObject prefab;
     public bool facingPlayer = false;
     public bool isHead;
-    private Vector2 pos;
     public BallType ballType = 0;
     public GameObject prev = null;
     public GameObject next = null;
     private Transform route;
     private float t;
     public float speedMultiplier;
+    public float shootSpeedMultiplier = 1f;
     private int currentCurveIndex = 0;
     private int curvesRemaining;
 
@@ -22,9 +22,14 @@ public class Ball : MonoBehaviour
     private float tStepSize;
     private float ballRadius;
 
+    private Vector2 mousePos;
+    private Vector2 playerPos;
+    private bool isFromPlayer = false;
+
     private void Update()
     {
-        if (isHead) Move();
+        if (isFromPlayer) Shoot();
+        else if (isHead) Move();
         else Follow();
     }
 
@@ -39,11 +44,33 @@ public class Ball : MonoBehaviour
         this.route = route;
         this.isHead = isHead;
         this.ballRadius = ballRadius;
-        t = 0;
         stepSize *= speedMultiplier;
         errorSize = stepSize / 20;
         curvesRemaining = (route.childCount - 1) / 3;
         transform.position = GetBezierPoint(0, route, 0);
+    }
+
+    public void Init(Vector2 playerPos, Vector2 mousePos, bool isFromPlayer)
+    {
+        t = 0;
+        this.playerPos = playerPos;
+        this.mousePos = mousePos;
+        this.isFromPlayer = isFromPlayer;
+    }
+
+    public void Shoot()
+    {
+        this.transform.position = GetLinearPos(t, playerPos, mousePos, shootSpeedMultiplier);
+        t += Time.deltaTime;
+    }
+
+    public Vector2 GetLinearPos(float t, Vector2 start, Vector2 end, float speed)
+    {
+        float distance = Vector2.Distance(start, end);
+
+        float timeToReachEnd = distance / speed;
+
+        return new Vector2(start.x + (end.x - start.x) * speed * t * 15f / distance, start.y + (end.y - start.y) * speed * t * 15f / distance);
     }
 
     public void Move()
@@ -72,7 +99,6 @@ public class Ball : MonoBehaviour
 
         
         if (Vector2.Distance(prevBallPos, transform.position) < 2 * ballRadius) return;
-        Debug.Log("Reached");
         t = GetNextTFollow(t, prevBallPos, ballRadius, tStepSize, errorSize, route, currentCurveIndex);
 
         transform.position = GetBezierPoint(t, route, currentCurveIndex);
@@ -165,4 +191,5 @@ public class Ball : MonoBehaviour
         int vertex3 = currentCurveIndex * 3 + 3;
         return GetBezierPoint(t, route.GetChild(vertex0).position, route.GetChild(vertex1).position, route.GetChild(vertex2).position, route.GetChild(vertex3).position);
     }
+
 }
