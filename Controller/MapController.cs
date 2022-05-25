@@ -20,12 +20,12 @@ public class MapController : MonoBehaviour
         prefabController = new();
         BallPrefabs = prefabController.BallPrefabs;
 
-        GameObject playerBall = BallPrefabs[3];
-        Instantiate(playerBall, this.transform).AddComponent<PlayerController>();
+        GameObject ballQueue = Instantiate(prefabController.ballQueue, this.transform);
+        ballQueue.AddComponent<BallQueue>();
 
-        GameObject ballQueue = prefabController.ballQueue;
-        Instantiate(ballQueue, this.transform).AddComponent<BallQueue>();
-
+        GameObject playerBall = Instantiate(BallPrefabs[3], this.transform);
+        playerBall.AddComponent<PlayerController>();
+        playerBall.GetComponent<PlayerController>().SetBallQueue(ballQueue.transform);
 
     }
 

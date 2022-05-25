@@ -13,7 +13,7 @@ public class PlayerController : MonoBehaviour
     private GameObject[] BallPrefabs;
     private int ballType = 3;
     private Vector2 mousePos;
-
+    private Transform ballQueue;
 
     // Start is called before the first frame update
     void Start()
@@ -67,16 +67,15 @@ public class PlayerController : MonoBehaviour
 
     private void LaunchBall()
     {
-        GameObject ball = Instantiate(BallPrefabs[ballType], this.transform.parent.transform);
+        GameObject ball = Instantiate(BallPrefabs[ballType], this.transform.parent);
         ball.transform.rotation = this.transform.rotation;
         ball.AddComponent<Ball>();
-        ball.GetComponent<Ball>().Init(this.transform.position, mousePos, true);
+        ball.GetComponent<Ball>().Init(this.transform.position, mousePos, true, ballQueue, 0.42f);
     }
 
-    public void ToGameObject()
-    {
-        GameObject gameObject = new GameObject("Unspecified Ball");
-        SpriteRenderer spriteRenderer = gameObject.AddComponent<SpriteRenderer>();
 
+    public void SetBallQueue(Transform ballQueue)
+    {
+        this.ballQueue = ballQueue;
     }
 }

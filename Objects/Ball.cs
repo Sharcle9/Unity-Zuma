@@ -26,14 +26,31 @@ public class Ball : MonoBehaviour
     private Vector2 playerPos;
     private bool isFromPlayer = false;
 
+    private Transform ballQueue;
+    private bool hasStarted = false;
+
     private void Update()
     {
-        if (isFromPlayer && isVisible())
+
+        if (isFromPlayer)
+        {
+            Transform collidingBall = IsTouchingQueue();
+            if (collidingBall != null)
+            {
+                isFromPlayer = false;
+                SwitchParent(ballQueue);
+                JoinQueue(collidingBall);
+            }
+            
+        }
+
+        if (isFromPlayer && IsVisible())
         {
             Shoot();
         }
         else if (isHead) Move();
-        else Follow();
+        else FollowDebug();
+
     }
 
     public void Init(float t, float speedMultiplier, int currentCurveIndex, int curvesRemaining, float stepSize, float tStepSize, Transform route, bool isHead, float ballRadius)
@@ -48,17 +65,19 @@ public class Ball : MonoBehaviour
         this.isHead = isHead;
         this.ballRadius = ballRadius;
         stepSize *= speedMultiplier;
-        errorSize = stepSize / 20;
+        errorSize = stepSize / 50;
         curvesRemaining = (route.childCount - 1) / 3;
         transform.position = GetBezierPoint(0, route, 0);
     }
 
-    public void Init(Vector2 playerPos, Vector2 mousePos, bool isFromPlayer)
+    public void Init(Vector2 playerPos, Vector2 mousePos, bool isFromPlayer, Transform ballQueue, float ballRadius)
     {
         t = 0;
         this.playerPos = playerPos;
         this.mousePos = mousePos;
         this.isFromPlayer = isFromPlayer;
+        this.ballQueue = ballQueue;
+        this.ballRadius = ballRadius;
     }
 
     public void Shoot()
@@ -83,6 +102,7 @@ public class Ball : MonoBehaviour
         t = GetNextT(t, tStepSize, stepSize, errorSize, route, currentCurveIndex);
 
         transform.position = GetBezierPoint(t, route, currentCurveIndex);
+        hasStarted = true;
 
         if (t >= 1)
         {
@@ -115,6 +135,17 @@ public class Ball : MonoBehaviour
         }
     }
 
+    private void FollowDebug()
+    {
+        if (prev == null) return;
+
+        Vector2 prevBallPos = prev.transform.position;
+
+
+        if (!hasStarted && Vector2.Distance(prevBallPos, transform.position) < 2 * ballRadius) return;
+
+        Move();
+    }
     private Vector2 GetBezierPoint(float t, Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3)
     {
         return p0 * Mathf.Pow((1 - t), 3) + (3 * Mathf.Pow((1 - t), 2) * t * p1) + ((1 - t) * 3 * Mathf.Pow(t, 2) * p2) + p3 * Mathf.Pow(t, 3);
@@ -195,7 +226,7 @@ public class Ball : MonoBehaviour
         return GetBezierPoint(t, route.GetChild(vertex0).position, route.GetChild(vertex1).position, route.GetChild(vertex2).position, route.GetChild(vertex3).position);
     }
 
-    private bool isVisible()
+    private bool IsVisible()
     {
         if (!this.GetComponent<SpriteRenderer>().isVisible)
         {
@@ -203,5 +234,49 @@ public class Ball : MonoBehaviour
             return false;
         }
         else return true;
+    }
+
+    private Transform IsTouchingQueue()
+    {
+        int currentBallCount = ballQueue.childCount;
+        Vector2[] currentBallsPos = new Vector2[currentBallCount];
+
+        for (int i = 0; i < currentBallCount; i++)
+        {
+            Transform pointerBall = ballQueue.GetChild(i);
+            Vector2 pointerBallPos = pointerBall.position;
+            float pointerBallRadius = pointerBall.GetComponent<Ball>().ballRadius;
+            if (Vector2.Distance(pointerBallPos, this.transform.position) < ballRadius + pointerBallRadius)
+            {
+                return pointerBall;
+            }
+        }
+
+        return null;
+    }
+
+    private void SwitchParent(Transform parent)
+    {
+        this.transform.parent = parent;
+    }
+
+    private void JoinQueue(Transform collidingBall)
+    {
+        GameObject prevBall = collidingBall.GetComponent<Ball>().next;
+
+        if (prevBall != null) prevBall.GetComponent<Ball>().next = this.gameObject;
+        collidingBall.GetComponent<Ball>().prev = this.gameObject;
+
+        this.prev = prevBall;
+        this.next = collidingBall.gameObject;
+        
+        float nextT = collidingBall.GetComponent<Ball>().t;
+        float nextSpeedMultiplier = collidingBall.GetComponent<Ball>().speedMultiplier;
+        int nextCurrentCurveIndex = collidingBall.GetComponent<Ball>().currentCurveIndex;
+        int nextCurvesRemaining = collidingBall.GetComponent<Ball>().curvesRemaining;
+        float nextStepSize = collidingBall.GetComponent<Ball>().stepSize;
+        float nextTStepSize = collidingBall.GetComponent<Ball>().tStepSize;
+        Transform nextRoute = collidingBall.GetComponent<Ball>().route;
+        Init(nextT, nextSpeedMultiplier, nextCurrentCurveIndex, nextCurvesRemaining, nextStepSize, nextTStepSize, nextRoute, prev == null, ballRadius);
     }
 }
