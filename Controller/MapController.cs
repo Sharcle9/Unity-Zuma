@@ -5,18 +5,40 @@ using UnityEngine;
 public class MapController : MonoBehaviour
 {
     static int ballType = 0;
-    public GameObject[] BallPrefabs;
+    public PrefabController prefabController;
     public MapData mapData;
+    private bool canSpawn;
+    private GameObject[] BallPrefabs;
 
     public MapController(MapData mapData)
     {
         this.mapData = mapData;
     }
 
+    private void Start()
+    {
+        prefabController = new();
+        BallPrefabs = prefabController.BallPrefabs;
+
+        GameObject playerBall = BallPrefabs[3];
+        Instantiate(playerBall, this.transform).AddComponent<PlayerController>();
+
+        GameObject ballQueue = prefabController.ballQueue;
+        Instantiate(ballQueue, this.transform).AddComponent<BallQueue>();
+
+
+    }
+
+    private void Update()
+    {
+
+    }
+
     public BallType GenerateBall()
     {
         return (BallType) ballType;
     }
+
 
     public void GenerateBallOnClick()
     {
@@ -32,14 +54,6 @@ public class MapController : MonoBehaviour
     public void GenerateQueue(int count)
     {
         BallQueue ballQueue = gameObject.AddComponent<BallQueue>();
-    }
-
-    private void Update()
-    {
-        if (Input.GetButtonDown("Fire1"))
-        {
-            GenerateBallOnClick();
-        }
     }
 
 }

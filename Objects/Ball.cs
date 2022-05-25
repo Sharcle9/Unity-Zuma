@@ -28,7 +28,10 @@ public class Ball : MonoBehaviour
 
     private void Update()
     {
-        if (isFromPlayer) Shoot();
+        if (isFromPlayer && isVisible())
+        {
+            Shoot();
+        }
         else if (isHead) Move();
         else Follow();
     }
@@ -192,4 +195,13 @@ public class Ball : MonoBehaviour
         return GetBezierPoint(t, route.GetChild(vertex0).position, route.GetChild(vertex1).position, route.GetChild(vertex2).position, route.GetChild(vertex3).position);
     }
 
+    private bool isVisible()
+    {
+        if (!this.GetComponent<SpriteRenderer>().isVisible)
+        {
+            Destroy(this.gameObject);
+            return false;
+        }
+        else return true;
+    }
 }
