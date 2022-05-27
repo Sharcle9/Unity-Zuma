@@ -6,13 +6,14 @@ public class Ball : MonoBehaviour
 {
     public GameObject prefab;
     public bool facingPlayer = false;
-    public bool isHead;
+    public bool isHead = false;
+    public bool isTail = false;
     public BallType ballType = 0;
     public GameObject ahead = null;
     public GameObject behind = null;
     private Transform route;
     private float t;
-    public float speedMultiplier;
+    public float speedMultiplier = 1f;
     public float shootSpeedMultiplier = 1f;
     private int currentCurveIndex = 0;
     private int curvesRemaining;
@@ -31,12 +32,11 @@ public class Ball : MonoBehaviour
     private bool hasStarted = false;
     private bool isInQueue = true;
     private Transform collidingBall;
+    private bool isAheadOfCollidingBall;
     private bool counterclockwise = true;
 
     private void Update()
     {
-
-        if (ahead == null) isHead = true;
 
         if (isShooting)
         {
@@ -49,21 +49,52 @@ public class Ball : MonoBehaviour
                 route = collidingBall.GetComponent<Ball>().route;
                 curvesRemaining = (route.childCount - 1) / 3;
                 totalCurves = (route.childCount - 1) / 3;
-            } 
+            }
             else if (IsVisible())
             {
                 Shoot();
             }
-            
-        } 
-        else if (!isInQueue)
+
+        }
+        else
         {
-            if (!IsCloseToTrack())
+            isHead = ahead == null;
+            isTail = behind == null;
+
+            if (!isInQueue)
             {
-                // Debug.Log(Vector2.Distance(transform.position, collidingBall.position));
-                RotateAroundBall(collidingBall, counterclockwise);
+                if (!IsCloseToTrack())
+                {
+                    // Debug.Log(Vector2.Distance(transform.position, collidingBall.position));
+                    RotateAroundBall(collidingBall, counterclockwise);
+                }
+                
+                if (IsCloseToTrack())
+                {
+                    isInQueue = true;
+                    Ball ball = collidingBall.GetComponent<Ball>();
+                    Location location = GetLocationRelativeToBall(ball.transform.position,
+                        ball.t,
+                        this.ballRadius,
+                        ball.ballRadius,
+                        this.tStepSize,
+                        this.errorSize,
+                        this.route,
+                        ball.currentCurveIndex,
+                        isAheadOfCollidingBall);
+                    SetLocation(location);
+                }
             }
-        } 
+            else
+            {
+                Push();
+            }
+
+            if (isTail)
+            {
+                Move();
+            }
+        }
         /*
         else if (isHead) Move();
         else FollowDebug();
@@ -244,6 +275,29 @@ public class Ball : MonoBehaviour
         return GetBezierPoint(t, route.GetChild(vertex0).position, route.GetChild(vertex1).position, route.GetChild(vertex2).position, route.GetChild(vertex3).position);
     }
 
+    private void Push()
+    {
+        if (this.behind == null) return;
+
+        Vector2 ballBehindPos = this.behind.transform.position;
+        float distance = Vector2.Distance(ballBehindPos, this.transform.position);
+
+        if (distance < this.ballRadius + this.behind.GetComponent<Ball>().ballRadius)
+        {
+            Location location = GetLocationRelativeToBall(ballBehindPos,
+                this.t,
+                this.ballRadius,
+                this.behind.GetComponent<Ball>().ballRadius,
+                this.tStepSize,
+                this.errorSize,
+                this.route,
+                this.currentCurveIndex,
+                true);
+
+            SetLocation(location);
+        }
+    }
+
     /* Checks if the ball is off-screen*/
     private bool IsVisible()
     {
@@ -306,13 +360,14 @@ public class Ball : MonoBehaviour
     /* Convert a player-launched ball into a ball on track and join a queue */
     private void JoinQueue(Transform collidingBall)
     {
-        if (IsAheadOfCollidingBall(collidingBall))
+        isAheadOfCollidingBall = IsAheadOfCollidingBall(collidingBall);
+        if (isAheadOfCollidingBall)
         {
             Debug.Log("Ahead");
             SetRotationDirection(true);
 
-            SetRelation(collidingBall.gameObject, true);
             GameObject ballAhead = collidingBall.GetComponent<Ball>().ahead;
+            SetRelation(collidingBall.gameObject, true);
             SetRelation(ballAhead, false);
 
         }
@@ -321,8 +376,8 @@ public class Ball : MonoBehaviour
             Debug.Log("Behind");
             SetRotationDirection(false);
 
-            SetRelation(collidingBall.gameObject, false);
             GameObject ballAhead = collidingBall.GetComponent<Ball>().behind;
+            SetRelation(collidingBall.gameObject, false);
             SetRelation(ballAhead, true);
 
         }
@@ -353,7 +408,7 @@ public class Ball : MonoBehaviour
 
     private bool IsCloseToTrack()
     {
-        bool isAhead = IsAheadOfCollidingBall(this.collidingBall);
+        bool isAhead = isAheadOfCollidingBall;
         Ball ball = this.collidingBall.GetComponent<Ball>();
         Location location = GetLocationRelativeToBall(ball.transform.position, 
             ball.t, 
@@ -367,7 +422,7 @@ public class Ball : MonoBehaviour
 
         float distance = Vector2.Distance(GetBezierPoint(location.t, this.route, location.currentCurveIndex), this.transform.position);
         Debug.Log(distance);
-        return distance < shootSpeedMultiplier * 0.02;
+        return distance < shootSpeedMultiplier * 0.12f;
     }
 
     private static Vector2 Rotate(Vector2 v, float degrees)
