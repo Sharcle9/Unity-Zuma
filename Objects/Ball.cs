@@ -25,32 +25,43 @@ public class Ball : MonoBehaviour
 
     private Vector2 mousePos;
     private Vector2 playerPos;
-    private bool isFromPlayer = false;
+    private bool isShooting = false;
 
     private Transform ballQueue;
     private bool hasStarted = false;
+    private bool isInQueue = true;
+    private Transform collidingBall;
+    private bool counterclockwise = true;
 
     private void Update()
     {
 
         if (ahead == null) isHead = true;
 
-        if (isFromPlayer)
+        if (isShooting)
         {
-            Transform collidingBall = IsTouchingQueue();
+            collidingBall = IsTouchingQueue();
             if (collidingBall != null)
             {
-                isFromPlayer = false;
+                isShooting = false;
                 SwitchParent(ballQueue);
                 JoinQueue(collidingBall);
+            } 
+            else if (IsVisible())
+            {
+                Shoot();
             }
             
-        }
-
-        if (isFromPlayer && IsVisible())
+        } 
+        else if (!isInQueue)
         {
-            Shoot();
-        } /*
+            if (!IsCloseToTrack())
+            {
+
+                RotateAroundBall(collidingBall, counterclockwise);
+            }
+        } 
+        /*
         else if (isHead) Move();
         else FollowDebug();
         */
@@ -79,9 +90,10 @@ public class Ball : MonoBehaviour
         t = 0;
         this.playerPos = playerPos;
         this.mousePos = mousePos;
-        this.isFromPlayer = isFromPlayer;
+        this.isShooting = isFromPlayer;
         this.ballQueue = ballQueue;
         this.ballRadius = ballRadius;
+        this.isInQueue = false;
     }
 
     public void Shoot()
@@ -266,14 +278,29 @@ public class Ball : MonoBehaviour
     /* Convert a player-launched ball into a ball on track and join a queue */
     private void JoinQueue(Transform collidingBall)
     {
-        GameObject prevBall = collidingBall.GetComponent<Ball>().behind;
+        if (IsAheadOfCollidingBall(collidingBall))
+        {
+            Debug.Log("Ahead");
+            SetRotationDirection(true);
 
-        if (prevBall != null) prevBall.GetComponent<Ball>().behind = this.gameObject;
-        collidingBall.GetComponent<Ball>().ahead = this.gameObject;
+            SetRelation(collidingBall.gameObject, true);
+            GameObject ballAhead = collidingBall.GetComponent<Ball>().ahead;
+            SetRelation(ballAhead, false);
 
-        this.ahead = prevBall;
-        this.behind = collidingBall.gameObject;
+        }
+        else
+        {
+            Debug.Log("Behind");
+            SetRotationDirection(false);
+
+            SetRelation(collidingBall.gameObject, false);
+            GameObject ballAhead = collidingBall.GetComponent<Ball>().behind;
+            SetRelation(ballAhead, true);
+
+        }
+
         
+        /*
         float nextT = collidingBall.GetComponent<Ball>().t;
         float nextSpeedMultiplier = collidingBall.GetComponent<Ball>().speedMultiplier;
         int nextCurrentCurveIndex = collidingBall.GetComponent<Ball>().currentCurveIndex;
@@ -282,23 +309,81 @@ public class Ball : MonoBehaviour
         float nextTStepSize = collidingBall.GetComponent<Ball>().tStepSize;
         Transform nextRoute = collidingBall.GetComponent<Ball>().route;
         Init(nextT, nextSpeedMultiplier, nextCurrentCurveIndex, nextCurvesRemaining, nextStepSize, nextTStepSize, nextRoute, ahead == null, ballRadius);
+        */
     }
 
-    private bool AheadOfCollidingBall(Transform collidingBall)
+    // Rotate the current ball around the colliding ball
+    // Return true until the ball hits the track
+    private void RotateAroundBall(Transform collidingBall, bool counterclockwise)
     {
-        GameObject ballAhead = collidingBall.GetComponent<Ball>().ahead;
-        GameObject ballBehind = collidingBall.GetComponent<Ball>().behind;
+        float d = Time.deltaTime * shootSpeedMultiplier * 150;
+
+        if (!counterclockwise) d *= -1;
+
+        this.transform.position = RotateAround(collidingBall.position, this.transform.position, d);
+    }
+
+    private bool IsCloseToTrack()
+    {
+        return false;
+    }
+
+    private static Vector2 Rotate(Vector2 v, float degrees)
+    {
+        float sin = Mathf.Sin(degrees * Mathf.Deg2Rad);
+        float cos = Mathf.Cos(degrees * Mathf.Deg2Rad);
+
+        float tx = v.x;
+        float ty = v.y;
+
+        return new Vector2(cos * tx - sin * ty, sin * tx + cos * ty);
+    }
+
+    private static Vector2 RotateAround(Vector2 center, Vector2 v, float degrees)
+    {
+        return Rotate(v - center, degrees) + center;
+    }
+
+    private void SetRotationDirection(bool toAheadOfTargetBall)
+    {
+        GameObject relativeBallObject = toAheadOfTargetBall ? this.collidingBall.GetComponent<Ball>().ahead : this.collidingBall.GetComponent<Ball>().behind;
+        Vector2 relativeBallPos;
+        Ball ball = this.collidingBall.GetComponent<Ball>();
+
+        if (relativeBallObject != null)
+        {
+            relativeBallPos = relativeBallObject.transform.position;
+        }
+        else
+        {
+            relativeBallPos = GetBezierPoint(ball.t + 0.01f, ball.route, ball.currentCurveIndex);
+        }
+
+        float angle = Vector2.SignedAngle((Vector2)this.transform.position - (Vector2)this.collidingBall.position,
+            relativeBallPos - (Vector2)this.collidingBall.position);
+        Debug.Log((Vector2)this.transform.position);
+        Debug.Log(relativeBallPos);
+
+        // if going counterclockwise reaches track faster, set counterclockwise to true
+        counterclockwise = angle > 0;
+    }
+
+    private bool IsAheadOfCollidingBall(Transform collidingBall)
+    {
+        Ball ball = collidingBall.GetComponent<Ball>();
+
+        GameObject ballAhead = ball.ahead;
+        GameObject ballBehind = ball.behind;
 
         Vector2 collidingBallPos = collidingBall.position;
 
         // if the colliding ball is by itself
         if (ballAhead == null && ballBehind == null)
         {
-            Vector2 imaginaryBallAheadPos = GetBezierPoint(GetNextT(this.t, this.tStepSize, this.stepSize, this.errorSize, 
-                this.route, this.currentCurveIndex), this.route, this.currentCurveIndex);
+            Vector2 imaginaryBallAheadPos = GetBezierPoint(ball.t + 0.01f, ball.route, ball.currentCurveIndex);
 
-            float angle = Vector2.Angle(collidingBallPos - (Vector2) this.transform.position, 
-                imaginaryBallAheadPos - (Vector2) this.transform.position);
+            float angle = Vector2.Angle((Vector2) this.transform.position - collidingBallPos, 
+                imaginaryBallAheadPos - collidingBallPos);
 
             if (angle < 90f) return true;
             else return false;
@@ -307,8 +392,8 @@ public class Ball : MonoBehaviour
         // if the colliding ball is the head
         if (ballAhead == null)
         {
-            float angle = Vector2.Angle(collidingBallPos - (Vector2)this.transform.position, 
-                (Vector2) ballBehind.transform.position - (Vector2)this.transform.position);
+            float angle = Vector2.Angle((Vector2)this.transform.position - collidingBallPos, 
+                (Vector2) ballBehind.transform.position - collidingBallPos);
 
             if (angle < 90f) return false;
             else return true;
@@ -317,17 +402,17 @@ public class Ball : MonoBehaviour
         // if the colliding ball is the tail
         if (ballBehind == null)
         {
-            float angle = Vector2.Angle(collidingBallPos - (Vector2)this.transform.position, 
-                (Vector2)ballAhead.transform.position - (Vector2)this.transform.position);
+            float angle = Vector2.Angle((Vector2)this.transform.position - collidingBallPos, 
+                (Vector2)ballAhead.transform.position - collidingBallPos);
 
             if (angle < 90f) return true;
             else return false;
         }
 
-        float angleToAhead = Vector2.Angle(collidingBallPos - (Vector2)this.transform.position, 
-            (Vector2)ballAhead.transform.position - (Vector2)this.transform.position);
-        float angleToBehind = Vector2.Angle(collidingBallPos - (Vector2)this.transform.position, 
-            (Vector2)ballBehind.transform.position - (Vector2)this.transform.position);
+        float angleToAhead = Vector2.Angle((Vector2)this.transform.position - collidingBallPos, 
+            (Vector2)ballAhead.transform.position - collidingBallPos);
+        float angleToBehind = Vector2.Angle((Vector2)this.transform.position - collidingBallPos, 
+            (Vector2)ballBehind.transform.position - collidingBallPos);
 
         if (angleToAhead < angleToBehind) return true;
         else return false;
@@ -429,12 +514,12 @@ public class Ball : MonoBehaviour
         if (IsAheadOfTargetBall)
         {
             this.behind = targetBallObject;
-            targetBallObject.GetComponent<Ball>().ahead = this.gameObject;
+            if (targetBallObject != null) targetBallObject.GetComponent<Ball>().ahead = this.gameObject;
         }
         else
         {
             this.ahead = targetBallObject;
-            targetBallObject.GetComponent<Ball>().behind = this.gameObject;
+            if (targetBallObject != null) targetBallObject.GetComponent<Ball>().behind = this.gameObject;
         }
     }
 
