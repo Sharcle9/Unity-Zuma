@@ -66,10 +66,25 @@ public class BallQueue : MonoBehaviour
         ball.AddComponent<Ball>();
         ball.GetComponent<Ball>().Init(0.99f, speedMultiplier, 1, curvesRemaining, stepSize, tStepSize, route, true, ballRadius);
 
-        GameObject ballAhead = Instantiate(BallPrefabs[3], this.transform);
-        ballAhead.AddComponent<Ball>();
-        ballAhead.GetComponent<Ball>().Init(0.5f, speedMultiplier, 0, curvesRemaining, stepSize, tStepSize, route, true, ballRadius);
-        ballAhead.GetComponent<Ball>().SetLocationRelativeToBall(ball, true);
+        GameObject ballAhead1 = Instantiate(BallPrefabs[3], this.transform);
+        ballAhead1.AddComponent<Ball>();
+        ballAhead1.GetComponent<Ball>().Init(0.5f, speedMultiplier, 0, curvesRemaining, stepSize, tStepSize, route, true, ballRadius);
+        ballAhead1.GetComponent<Ball>().SetLocationRelativeToBall(ball, true);
+
+        GameObject ballAhead2 = Instantiate(BallPrefabs[3], this.transform);
+        ballAhead2.AddComponent<Ball>();
+        ballAhead2.GetComponent<Ball>().Init(0.5f, speedMultiplier, 0, curvesRemaining, stepSize, tStepSize, route, true, ballRadius);
+        ballAhead2.GetComponent<Ball>().SetLocationRelativeToBall(ballAhead1, true);
+
+        GameObject ballAhead3 = Instantiate(BallPrefabs[3], this.transform);
+        ballAhead3.AddComponent<Ball>();
+        ballAhead3.GetComponent<Ball>().Init(0.5f, speedMultiplier, 0, curvesRemaining, stepSize, tStepSize, route, true, ballRadius);
+        ballAhead3.GetComponent<Ball>().SetLocationRelativeToBall(ballAhead2, true);
+
+        GameObject ballAhead4 = Instantiate(BallPrefabs[3], this.transform);
+        ballAhead4.AddComponent<Ball>();
+        ballAhead4.GetComponent<Ball>().Init(0.5f, speedMultiplier, 0, curvesRemaining, stepSize, tStepSize, route, true, ballRadius);
+        ballAhead4.GetComponent<Ball>().SetLocationRelativeToBall(ballAhead3, true);
     }
 
     public void InitParamSetUp()
