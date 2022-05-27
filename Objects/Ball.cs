@@ -18,10 +18,10 @@ public class Ball : MonoBehaviour
     private int curvesRemaining;
     private int totalCurves;
 
-    private float stepSize;
+    private float stepSize = 0.005f;
     private float errorSize;
-    private float tStepSize;
-    private float ballRadius;
+    private float tStepSize = 0.001f;
+    private float ballRadius = 0.42f;
 
     private Vector2 mousePos;
     private Vector2 playerPos;
@@ -46,6 +46,9 @@ public class Ball : MonoBehaviour
                 isShooting = false;
                 SwitchParent(ballQueue);
                 JoinQueue(collidingBall);
+                route = collidingBall.GetComponent<Ball>().route;
+                curvesRemaining = (route.childCount - 1) / 3;
+                totalCurves = (route.childCount - 1) / 3;
             } 
             else if (IsVisible())
             {
@@ -57,7 +60,7 @@ public class Ball : MonoBehaviour
         {
             if (!IsCloseToTrack())
             {
-
+                // Debug.Log(Vector2.Distance(transform.position, collidingBall.position));
                 RotateAroundBall(collidingBall, counterclockwise);
             }
         } 
@@ -94,6 +97,7 @@ public class Ball : MonoBehaviour
         this.ballQueue = ballQueue;
         this.ballRadius = ballRadius;
         this.isInQueue = false;
+        errorSize = stepSize / 50;
     }
 
     public void Shoot()
@@ -263,11 +267,35 @@ public class Ball : MonoBehaviour
             float pointerBallRadius = pointerBall.GetComponent<Ball>().ballRadius;
             if (Vector2.Distance(pointerBallPos, this.transform.position) < ballRadius + pointerBallRadius)
             {
+                BounceBack(pointerBallPos, pointerBallRadius, tStepSize, t);
                 return pointerBall;
             }
         }
 
         return null;
+    }
+
+    private void BounceBack(Vector2 collidingBallPos, float collidingBallRadius, float tStepSize, float currentT)
+    {
+        float currentDistance = Vector2.Distance(collidingBallPos, this.transform.position);
+
+        while (currentDistance < this.ballRadius + collidingBallRadius)
+        {
+            tStepSize *= 2;
+            currentDistance = Vector2.Distance(collidingBallPos, GetLinearPos(currentT - tStepSize, playerPos, mousePos, shootSpeedMultiplier));
+        }
+
+        float deltaT = 0.5f * tStepSize;
+        // binary search
+        while (currentDistance < this.ballRadius + collidingBallRadius - errorSize || currentDistance > this.ballRadius + collidingBallRadius + errorSize)
+        {
+            if (currentDistance < this.ballRadius + collidingBallRadius) tStepSize += deltaT;
+            else tStepSize -= deltaT;
+
+            currentDistance = Vector2.Distance(collidingBallPos, GetLinearPos(currentT - tStepSize, playerPos, mousePos, shootSpeedMultiplier));
+            deltaT *= 0.5f;
+        }
+        this.transform.position = GetLinearPos(currentT - tStepSize, playerPos, mousePos, shootSpeedMultiplier);
     }
 
     private void SwitchParent(Transform parent)
@@ -316,7 +344,7 @@ public class Ball : MonoBehaviour
     // Return true until the ball hits the track
     private void RotateAroundBall(Transform collidingBall, bool counterclockwise)
     {
-        float d = Time.deltaTime * shootSpeedMultiplier * 150;
+        float d = Time.deltaTime * shootSpeedMultiplier * 500;
 
         if (!counterclockwise) d *= -1;
 
@@ -325,7 +353,21 @@ public class Ball : MonoBehaviour
 
     private bool IsCloseToTrack()
     {
-        return false;
+        bool isAhead = IsAheadOfCollidingBall(this.collidingBall);
+        Ball ball = this.collidingBall.GetComponent<Ball>();
+        Location location = GetLocationRelativeToBall(ball.transform.position, 
+            ball.t, 
+            this.ballRadius, 
+            ball.ballRadius, 
+            this.tStepSize, 
+            this.errorSize,
+            this.route, 
+            ball.currentCurveIndex, 
+            isAhead);
+
+        float distance = Vector2.Distance(GetBezierPoint(location.t, this.route, location.currentCurveIndex), this.transform.position);
+        Debug.Log(distance);
+        return distance < shootSpeedMultiplier * 0.02;
     }
 
     private static Vector2 Rotate(Vector2 v, float degrees)
@@ -356,7 +398,7 @@ public class Ball : MonoBehaviour
         }
         else
         {
-            relativeBallPos = GetBezierPoint(ball.t + 0.01f, ball.route, ball.currentCurveIndex);
+            relativeBallPos = GetBezierPoint(toAheadOfTargetBall ? ball.t + 0.01f : ball.t - 0.01f, ball.route, ball.currentCurveIndex);
         }
 
         float angle = Vector2.SignedAngle((Vector2)this.transform.position - (Vector2)this.collidingBall.position,
