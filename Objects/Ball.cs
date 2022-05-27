@@ -32,7 +32,7 @@ public class Ball : MonoBehaviour
     private bool hasStarted = false;
     private bool isInQueue = true;
     private Transform collidingBall;
-    private bool isAheadOfCollidingBall;
+    private bool isAheadOfCollidingBall = false;
     private bool counterclockwise = true;
 
     private void Update()
@@ -66,6 +66,15 @@ public class Ball : MonoBehaviour
                 if (!IsCloseToTrack())
                 {
                     // Debug.Log(Vector2.Distance(transform.position, collidingBall.position));
+
+                    if (!isAheadOfCollidingBall  && AreColliding(this.behind.transform, this.transform))
+                    {
+                        collidingBall = behind.transform;
+                        isAheadOfCollidingBall = true;
+                        counterclockwise = !counterclockwise;
+                    }
+
+
                     RotateAroundBall(collidingBall, counterclockwise);
                 }
                 
@@ -92,7 +101,7 @@ public class Ball : MonoBehaviour
 
             if (isTail)
             {
-                Move();
+                // Move();
             }
         }
         /*
@@ -275,6 +284,12 @@ public class Ball : MonoBehaviour
         return GetBezierPoint(t, route.GetChild(vertex0).position, route.GetChild(vertex1).position, route.GetChild(vertex2).position, route.GetChild(vertex3).position);
     }
 
+    private static bool AreColliding(Transform ball1, Transform ball2)
+    {
+        return Vector2.Distance(ball1.position, ball2.position) 
+            < ball1.GetComponent<Ball>().ballRadius + ball2.GetComponent<Ball>().ballRadius;
+    }
+
     private void Push()
     {
         if (this.behind == null) return;
@@ -319,7 +334,7 @@ public class Ball : MonoBehaviour
             Transform pointerBall = ballQueue.GetChild(i);
             Vector2 pointerBallPos = pointerBall.position;
             float pointerBallRadius = pointerBall.GetComponent<Ball>().ballRadius;
-            if (Vector2.Distance(pointerBallPos, this.transform.position) < ballRadius + pointerBallRadius)
+            if (AreColliding(pointerBall, this.transform))
             {
                 BounceBack(pointerBallPos, pointerBallRadius, tStepSize, t);
                 return pointerBall;
