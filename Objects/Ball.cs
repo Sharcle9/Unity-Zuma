@@ -33,6 +33,8 @@ public class Ball : MonoBehaviour
     private void Update()
     {
 
+        if (ahead == null) isHead = true;
+
         if (isFromPlayer)
         {
             Transform collidingBall = IsTouchingQueue();
@@ -48,10 +50,10 @@ public class Ball : MonoBehaviour
         if (isFromPlayer && IsVisible())
         {
             Shoot();
-        }
-        else if (isHead) /*Move()*/;
+        } /*
+        else if (isHead) Move();
         else FollowDebug();
-
+        */
     }
 
     public void Init(float t, float speedMultiplier, int currentCurveIndex, int curvesRemaining, float stepSize, float tStepSize, Transform route, bool isHead, float ballRadius)
@@ -116,13 +118,26 @@ public class Ball : MonoBehaviour
 
     }
 
+    private void FollowDebug()
+    {
+        if (ahead == null) return;
+
+        Vector2 prevBallPos = ahead.transform.position;
+
+
+        if (!hasStarted && Vector2.Distance(prevBallPos, transform.position) < 2 * ballRadius) return;
+
+        Move();
+    }
+
+    /*
     private void Follow()
     {
         if (ahead == null) return;
 
         Vector2 prevBallPos = ahead.transform.position;
 
-        
+
         if (Vector2.Distance(prevBallPos, transform.position) < 2 * ballRadius) return;
         t = GetNextTFollow(t, prevBallPos, ballRadius, tStepSize, errorSize, route, currentCurveIndex);
 
@@ -136,19 +151,6 @@ public class Ball : MonoBehaviour
             curvesRemaining--;
         }
     }
-
-    private void FollowDebug()
-    {
-        if (ahead == null) return;
-
-        Vector2 prevBallPos = ahead.transform.position;
-
-
-        if (!hasStarted && Vector2.Distance(prevBallPos, transform.position) < 2 * ballRadius) return;
-
-        Move();
-    }
-
     private static float GetNextTFollow(float currentT, Vector2 prevBallPos, float radius, float tStepSize, float errorSize, Transform route, int currentCurveIndex)
     {
         float currentDistance = Vector2.Distance(prevBallPos, GetBezierPoint(currentT + tStepSize, route, currentCurveIndex));
@@ -177,56 +179,8 @@ public class Ball : MonoBehaviour
 
         return currentT + tStepSize;
     }
-
-    private static Location GetLocationRelativeToBall(Vector2 targetBallPos, float targetBallT, float radius, float targetBallRadius, float tStepSize, float errorSize, Transform route, int targetBallCurveIndex, bool aheadOfGivenBall)
-    {
-
-        float currentDistance = Vector2.Distance(targetBallPos, GetBezierPoint(aheadOfGivenBall ? targetBallT + tStepSize : targetBallT - tStepSize, route, targetBallCurveIndex));
-        int count = 0;
-
-        while (currentDistance < radius + targetBallRadius)
-        {
-            tStepSize *= 2;
-            currentDistance = Vector2.Distance(targetBallPos, GetBezierPoint(aheadOfGivenBall ? targetBallT + tStepSize : targetBallT - tStepSize, route, targetBallCurveIndex));
-            count++;
-        }
-
-        float deltaT = 0.5f * tStepSize;
-        // binary search
-        while (currentDistance < radius + targetBallRadius - errorSize || currentDistance > radius + targetBallRadius + errorSize)
-        {
-            if (currentDistance < radius + targetBallRadius) tStepSize += deltaT;
-            else tStepSize -= deltaT;
-
-            currentDistance = Vector2.Distance(targetBallPos, GetBezierPoint(aheadOfGivenBall ? targetBallT + tStepSize : targetBallT - tStepSize, route, targetBallCurveIndex));
-            deltaT *= 0.5f;
-            count++;
-        }
-
-        if (aheadOfGivenBall)
-        {
-            if (targetBallT + tStepSize > 1 && targetBallCurveIndex <= GetNumberOfCurves(route) - 1)
-            {
-                return GetLocationRelativeToBall(targetBallPos, 0, radius, targetBallRadius, tStepSize, errorSize, route, targetBallCurveIndex + 1, aheadOfGivenBall);
-            }
-            else
-            {
-                return new Location(targetBallT + tStepSize, targetBallCurveIndex);
-            }
-        }
-        else
-        {
-            if (targetBallT - tStepSize < 0 && targetBallCurveIndex > 0)
-            {
-                return GetLocationRelativeToBall(targetBallPos, 1, radius, targetBallRadius, tStepSize, errorSize, route, targetBallCurveIndex - 1, aheadOfGivenBall);
-            }
-            else
-            {
-                return new Location(targetBallT - tStepSize, targetBallCurveIndex);
-            }
-        }
-    }
-
+    */
+    
     /* Get the next t value when moving at a constant speed */
     private float GetNextT(float currentT, float tStepSize, float stepSize, float errorSize, Transform route, int currentCurveIndex)
     {
@@ -262,11 +216,6 @@ public class Ball : MonoBehaviour
     private static Vector2 GetBezierPoint(float t, Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3)
     {
         return p0 * Mathf.Pow((1 - t), 3) + (3 * Mathf.Pow((1 - t), 2) * t * p1) + ((1 - t) * 3 * Mathf.Pow(t, 2) * p2) + p3 * Mathf.Pow(t, 3);
-    }
-
-    private static Vector2 GetBezierPoint(float t, Transform route)
-    {
-        return GetBezierPoint(t, route.GetChild(0).position, route.GetChild(1).position, route.GetChild(2).position, route.GetChild(3).position);
     }
 
     private static Vector2 GetBezierPoint(float t, Transform route, int currentCurveIndex)
@@ -335,30 +284,132 @@ public class Ball : MonoBehaviour
         Init(nextT, nextSpeedMultiplier, nextCurrentCurveIndex, nextCurvesRemaining, nextStepSize, nextTStepSize, nextRoute, ahead == null, ballRadius);
     }
 
-    /* Get a suitable location on track ahead of a given ball */
-    public void SetLocationRelativeToBall(float targetBallT, int targetBallCurveIndex, float targetBallRadius, bool aheadOfGivenBall)
+    private bool AheadOfCollidingBall(Transform collidingBall)
     {
-        Vector2 nextBallPos = GetBezierPoint(targetBallT, route, targetBallCurveIndex);
-        Location location = GetLocationRelativeToBall(nextBallPos, targetBallT, ballRadius, targetBallRadius, tStepSize, errorSize, route, targetBallCurveIndex, aheadOfGivenBall);
+        GameObject ballAhead = collidingBall.GetComponent<Ball>().ahead;
+        GameObject ballBehind = collidingBall.GetComponent<Ball>().behind;
+
+        Vector2 collidingBallPos = collidingBall.position;
+
+        // if the colliding ball is by itself
+        if (ballAhead == null && ballBehind == null)
+        {
+            Vector2 imaginaryBallAheadPos = GetBezierPoint(GetNextT(this.t, this.tStepSize, this.stepSize, this.errorSize, 
+                this.route, this.currentCurveIndex), this.route, this.currentCurveIndex);
+
+            float angle = Vector2.Angle(collidingBallPos - (Vector2) this.transform.position, 
+                imaginaryBallAheadPos - (Vector2) this.transform.position);
+
+            if (angle < 90f) return true;
+            else return false;
+        }
+
+        // if the colliding ball is the head
+        if (ballAhead == null)
+        {
+            float angle = Vector2.Angle(collidingBallPos - (Vector2)this.transform.position, 
+                (Vector2) ballBehind.transform.position - (Vector2)this.transform.position);
+
+            if (angle < 90f) return false;
+            else return true;
+        }
+
+        // if the colliding ball is the tail
+        if (ballBehind == null)
+        {
+            float angle = Vector2.Angle(collidingBallPos - (Vector2)this.transform.position, 
+                (Vector2)ballAhead.transform.position - (Vector2)this.transform.position);
+
+            if (angle < 90f) return true;
+            else return false;
+        }
+
+        float angleToAhead = Vector2.Angle(collidingBallPos - (Vector2)this.transform.position, 
+            (Vector2)ballAhead.transform.position - (Vector2)this.transform.position);
+        float angleToBehind = Vector2.Angle(collidingBallPos - (Vector2)this.transform.position, 
+            (Vector2)ballBehind.transform.position - (Vector2)this.transform.position);
+
+        if (angleToAhead < angleToBehind) return true;
+        else return false;
+    }
+
+    /// <summary>
+    /// Get the location behind/ahead of a given ball that tightly touches it
+    /// </summary>
+    /// <param name="targetBallPos">position of the target ball</param>
+    /// <param name="targetBallT">t value of the target ball on its current Bezier curve</param>
+    /// <param name="radius">radius of the ball being added</param>
+    /// <param name="targetBallRadius">radius of the target ball</param>
+    /// <param name="tStepSize">how much t steps initially</param>
+    /// <param name="errorSize">the amount of error allowed in binary search</param>
+    /// <param name="route">current route</param>
+    /// <param name="targetBallCurveIndex">curve index of the target ball on its current Bezier curve</param>
+    /// <param name="aheadOfGivenBall">whether to get the position ahead of the target ball</param>
+    /// <returns></returns>
+    private static Location GetLocationRelativeToBall(Vector2 targetBallPos, float targetBallT, float radius, 
+        float targetBallRadius, float tStepSize, float errorSize, Transform route, int targetBallCurveIndex, bool aheadOfGivenBall)
+    {
+
+        float currentDistance = Vector2.Distance(targetBallPos, GetBezierPoint(aheadOfGivenBall ? targetBallT + tStepSize : targetBallT - tStepSize, route, targetBallCurveIndex));
+        int count = 0;
+
+        while (currentDistance < radius + targetBallRadius)
+        {
+            tStepSize *= 2;
+            currentDistance = Vector2.Distance(targetBallPos, GetBezierPoint(aheadOfGivenBall ? targetBallT + tStepSize : targetBallT - tStepSize, route, targetBallCurveIndex));
+            count++;
+        }
+
+        float deltaT = 0.5f * tStepSize;
+        // binary search
+        while (currentDistance < radius + targetBallRadius - errorSize || currentDistance > radius + targetBallRadius + errorSize)
+        {
+            if (currentDistance < radius + targetBallRadius) tStepSize += deltaT;
+            else tStepSize -= deltaT;
+
+            currentDistance = Vector2.Distance(targetBallPos, GetBezierPoint(aheadOfGivenBall ? targetBallT + tStepSize : targetBallT - tStepSize, route, targetBallCurveIndex));
+            deltaT *= 0.5f;
+            count++;
+        }
+
+        if (aheadOfGivenBall)
+        {
+            if (targetBallT + tStepSize > 1 && targetBallCurveIndex <= GetNumberOfCurves(route) - 1)
+            {
+                return GetLocationRelativeToBall(targetBallPos, 0, radius, targetBallRadius, tStepSize, errorSize, route, targetBallCurveIndex + 1, aheadOfGivenBall);
+            }
+            else
+            {
+                return new Location(targetBallT + tStepSize, targetBallCurveIndex);
+            }
+        }
+        else
+        {
+            if (targetBallT - tStepSize < 0 && targetBallCurveIndex > 0)
+            {
+                return GetLocationRelativeToBall(targetBallPos, 1, radius, targetBallRadius, tStepSize, errorSize, route, targetBallCurveIndex - 1, aheadOfGivenBall);
+            }
+            else
+            {
+                return new Location(targetBallT - tStepSize, targetBallCurveIndex);
+            }
+        }
+    }
+
+    /* Set the location ahead/behind of a given ball */
+    public void SetLocationRelativeToBall(GameObject targetBallObject, bool aheadOfGivenBall)
+    {
+        Ball targetBall = targetBallObject.GetComponent<Ball>();
+        float targetBallT = targetBall.t;
+        int targetBallCurveIndex = targetBall.currentCurveIndex;
+        float targetBallRadius = targetBall.ballRadius;
+        Vector2 targetBallPos = GetBezierPoint(targetBallT, route, targetBallCurveIndex);
+        Location location = GetLocationRelativeToBall(targetBallPos, targetBallT, ballRadius, targetBallRadius, tStepSize,
+            errorSize, route, targetBallCurveIndex, aheadOfGivenBall);
 
         SetLocation(location);
+        SetRelation(targetBallObject, aheadOfGivenBall);
     }
-
-    public void SetLocationRelativeToBall(Location location, float targetBallRadius, bool aheadOfGivenBall)
-    {
-        SetLocationRelativeToBall(location.t, location.currentCurveIndex, targetBallRadius, aheadOfGivenBall);
-    }
-
-    public void SetLocationRelativeToBall(Ball targetBall, bool aheadOfGivenBall)
-    {
-        SetLocationRelativeToBall(targetBall.GetLocation(), targetBall.ballRadius, aheadOfGivenBall);
-    }
-
-    public void SetLocationRelativeToBall(GameObject targetBall, bool aheadOfGivenBall)
-    {
-        SetLocationRelativeToBall(targetBall.GetComponent<Ball>(), aheadOfGivenBall);
-    }
-
 
     private Location GetLocation()
     {
@@ -370,6 +421,21 @@ public class Ball : MonoBehaviour
         this.transform.position = GetBezierPoint(location.t, route, location.currentCurveIndex);
         this.t = location.t;
         this.currentCurveIndex = location.currentCurveIndex;
+    }
+
+    // Set the ahead/behind relation between the target ball and current ball
+    private void SetRelation(GameObject targetBallObject, bool IsAheadOfTargetBall)
+    {
+        if (IsAheadOfTargetBall)
+        {
+            this.behind = targetBallObject;
+            targetBallObject.GetComponent<Ball>().ahead = this.gameObject;
+        }
+        else
+        {
+            this.ahead = targetBallObject;
+            targetBallObject.GetComponent<Ball>().behind = this.gameObject;
+        }
     }
 
     private static int GetNumberOfCurves(Transform route)
