@@ -45,9 +45,10 @@ public class Ball : MonoBehaviour
             if (!isInQueue) UpdateRotatingBall();
             else Push();
 
-            if (isTail) Move();
+            if (isTail) Move(speedMultiplier);
         }
     }
+
 
     private void UpdateShootingBall()
     {
@@ -79,6 +80,7 @@ public class Ball : MonoBehaviour
             }
 
 
+            Debug.Log(collidingBall.GetComponent<Ball>().ballType + " " + collidingBall.position);
             RotateAroundBall(collidingBall, counterclockwise);
         }
 
@@ -142,11 +144,11 @@ public class Ball : MonoBehaviour
         return new Vector2(start.x + (end.x - start.x) * speed * t * 15f / distance, start.y + (end.y - start.y) * speed * t * 15f / distance);
     }
 
-    public void Move()
+    public void Move(float speedMultiplier)
     {
         if (totalCurves - currentCurveIndex - 1 == 0) return;
 
-        t = GetNextT(t, tStepSize, stepSize, errorSize, route, currentCurveIndex);
+        t = GetNextT(t, tStepSize, stepSize * speedMultiplier, errorSize, route, currentCurveIndex);
 
         transform.position = GetBezierPoint(t, route, currentCurveIndex);
 
@@ -622,17 +624,16 @@ public class Ball : MonoBehaviour
             while (ahead != null);
         }
 
-        Debug.Log(balls.Count);
 
         if (balls.Count >= 2)
         {
             if (ahead != null)
             {
-                ahead.GetComponent<Ball>().behind = null;
+                ahead.GetComponent<Ball>().behind = behind;
             }
             if (behind != null)
             {
-                behind.GetComponent<Ball>().ahead = null;
+                behind.GetComponent<Ball>().ahead = ahead;
             }
 
             foreach (GameObject ball in balls)

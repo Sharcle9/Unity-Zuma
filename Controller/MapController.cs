@@ -17,6 +17,7 @@ public class MapController : MonoBehaviour
 
     private void Start()
     {
+        this.transform.position = Vector2.zero;
         prefabController = new();
         BallPrefabs = prefabController.BallPrefabs;
 
