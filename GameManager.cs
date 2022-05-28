@@ -15,6 +15,10 @@ public class GameManager : MonoBehaviour
         GameObject mapController = prefabController.mapController;
         Instantiate(mapController, this.transform).AddComponent<MapController>();
 
+        Position p = new Position(prefabController.route, 0.5f, 1);
+
+        Debug.Log(p.totalCurves);
+
     }
 
     // Update is called once per frame
