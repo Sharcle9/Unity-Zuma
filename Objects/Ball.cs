@@ -20,6 +20,7 @@ public class Ball : MonoBehaviour
     private float stepSize = 0.005f;
     private float errorSize;
     private float tStepSize = 0.001f;
+
     private float ballRadius = 0.42f;
 
     private Vector2 mousePos;
@@ -34,102 +35,95 @@ public class Ball : MonoBehaviour
 
     private void Update()
     {
-
-        if (isShooting) // if the ball is shooting from player
-        {
-            collidingBall = IsTouchingQueue();
-            if (collidingBall != null)
-            {
-                isShooting = false;
-                SwitchParent(ballQueue);
-                JoinQueue(collidingBall);
-                route = collidingBall.GetComponent<Ball>().route;
-                totalCurves = GetNumberOfCurves(route);
-            }
-            else if (IsVisible())
-            {
-                Shoot();
-            }
-
-        }
+        // if the ball is shooting from player
+        if (isShooting) UpdateShootingBall();
         else
         {
             SetHeadTailStatus();
 
-            if (!isInQueue) // if ball is still rotating onto track
-            {
-                if (!IsCloseToTrack(GetCurrentAngle()))
-                {
-                    // Debug.Log(Vector2.Distance(transform.position, collidingBall.position));
+            // if the ball is touching the queue and rotating into the queue
+            if (!isInQueue) UpdateRotatingBall();
+            else Push();
 
-                    if (!isAheadOfCollidingBall  && this.behind != null && AreColliding(this.behind.transform, this.transform))
-                    {
-                        collidingBall = behind.transform;
-                        isAheadOfCollidingBall = true;
-                        counterclockwise = !counterclockwise;
-                    }
-
-
-                    RotateAroundBall(collidingBall, counterclockwise);
-                }
-                
-                if (IsCloseToTrack(GetCurrentAngle()))
-                {
-                    isInQueue = true;
-                    Ball ball = collidingBall.GetComponent<Ball>();
-                    Location location = GetLocationRelativeToBall(ball.transform.position,
-                        ball.t,
-                        this.ballRadius,
-                        ball.ballRadius,
-                        this.tStepSize,
-                        this.errorSize,
-                        this.route,
-                        ball.currentCurveIndex,
-                        isAheadOfCollidingBall);
-                    SetLocation(location);
-                }
-            }
-            else
-            {
-                Push();
-            }
-
-            if (isTail)
-            {
-                Move();
-            }
+            if (isTail) Move();
         }
-        /*
-        else if (isHead) Move();
-        else FollowDebug();
-        */
     }
 
-    public void Init(float t, float speedMultiplier, int currentCurveIndex, float stepSize, float tStepSize, Transform route, bool isHead, float ballRadius)
+    private void UpdateShootingBall()
+    {
+        collidingBall = IsTouchingQueue();
+        if (collidingBall != null)
+        {
+            isShooting = false;
+            SwitchParent(ballQueue);
+            JoinQueue(collidingBall);
+            route = collidingBall.GetComponent<Ball>().route;
+            totalCurves = GetNumberOfCurves(route);
+        }
+        else if (IsVisible())
+        {
+            Shoot();
+        }
+    }
+
+    private void UpdateRotatingBall()
+    {
+        if (!IsCloseToTrack(GetCurrentAngle()))
+        {
+
+            if (!isAheadOfCollidingBall && this.behind != null && AreColliding(this.behind.transform, this.transform))
+            {
+                collidingBall = behind.transform;
+                isAheadOfCollidingBall = true;
+                counterclockwise = !counterclockwise;
+            }
+
+
+            RotateAroundBall(collidingBall, counterclockwise);
+        }
+
+        if (IsCloseToTrack(GetCurrentAngle()))
+        {
+            isInQueue = true;
+            Ball ball = collidingBall.GetComponent<Ball>();
+            Location location = GetLocationRelativeToBall(ball.transform.position,
+                ball.t,
+                this.ballRadius,
+                ball.ballRadius,
+                this.tStepSize,
+                this.errorSize,
+                this.route,
+                ball.currentCurveIndex,
+                isAheadOfCollidingBall);
+            SetLocation(location);
+
+            ClearCheck();
+        }
+    }
+
+    public void Init(float t, int currentCurveIndex, Transform route, float ballRadius, BallType ballType)
     {
         this.t = t;
-        this.speedMultiplier = speedMultiplier;
         this.currentCurveIndex = currentCurveIndex;
-        this.stepSize = stepSize;
-        this.tStepSize = tStepSize;
         this.route = route;
-        this.isHead = isHead;
         this.ballRadius = ballRadius;
+        this.ballType = ballType;
         stepSize *= speedMultiplier;
         errorSize = stepSize / 50;
         transform.position = GetBezierPoint(t, route, currentCurveIndex);
         totalCurves = GetNumberOfCurves(route);
     }
 
-    public void Init(Vector2 playerPos, Vector2 mousePos, bool isFromPlayer, Transform ballQueue, float ballRadius)
+    public void Init(Vector2 playerPos, Vector2 mousePos, Transform ballQueue, float ballRadius, BallType ballType)
     {
         t = 0;
         this.playerPos = playerPos;
         this.mousePos = mousePos;
-        this.isShooting = isFromPlayer;
+        this.isShooting = true;
         this.ballQueue = ballQueue;
         this.ballRadius = ballRadius;
         this.isInQueue = false;
+        this.ballType = ballType;
         errorSize = stepSize / 50;
     }
 
@@ -139,7 +133,7 @@ public class Ball : MonoBehaviour
         t += Time.deltaTime;
     }
 
-    public Vector2 GetLinearPos(float t, Vector2 start, Vector2 end, float speed)
+    public static Vector2 GetLinearPos(float t, Vector2 start, Vector2 end, float speed)
     {
         float distance = Vector2.Distance(start, end);
 
@@ -336,8 +330,6 @@ public class Ball : MonoBehaviour
         isAheadOfCollidingBall = IsAheadOfCollidingBall(collidingBall);
         if (isAheadOfCollidingBall)
         {
-            Debug.Log("Ahead");
-
             GameObject ballAhead = collidingBall.GetComponent<Ball>().ahead;
             SetRelation(collidingBall.gameObject, true);
             SetRelation(ballAhead, false);
@@ -346,8 +338,6 @@ public class Ball : MonoBehaviour
         }
         else
         {
-            Debug.Log("Behind");
-
             GameObject ballAhead = collidingBall.GetComponent<Ball>().behind;
             SetRelation(collidingBall.gameObject, false);
             SetRelation(ballAhead, true);
@@ -403,8 +393,6 @@ public class Ball : MonoBehaviour
 
     private bool IsCloseToTrack(float targetAngle)
     {
-        Debug.Log("counterclockwise: " + counterclockwise);
-        Debug.Log("angle " + targetAngle);
         if (counterclockwise)
         {
             return targetAngle < shootSpeedMultiplier;
@@ -413,7 +401,6 @@ public class Ball : MonoBehaviour
         {
             return targetAngle > - shootSpeedMultiplier;
         }
-        // Debug.Log(targetAngle);
         
     }
 
@@ -598,6 +585,64 @@ public class Ball : MonoBehaviour
     {
         return (route.childCount - 1) / 3;
     }
+
+
+    private void ClearCheck()
+    {
+        List<GameObject> balls = new();
+
+        // iterate behind
+        GameObject behind = this.behind;
+
+        if (behind != null)
+        {
+            do
+            {
+                if (behind.GetComponent<Ball>().ballType != this.ballType) break;
+                
+                balls.Add(behind);
+                behind = behind.GetComponent<Ball>().behind;
+            } 
+            while (behind != null);
+        }
+        
+
+        // iterate ahead
+        GameObject ahead = this.ahead;
+
+        if (ahead != null)
+        {
+            do
+            {
+                if (ahead.GetComponent<Ball>().ballType != this.ballType) break;
+
+                balls.Add(ahead);
+                ahead = ahead.GetComponent<Ball>().ahead;
+            }
+            while (ahead != null);
+        }
+
+        Debug.Log(balls.Count);
+
+        if (balls.Count >= 2)
+        {
+            if (ahead != null)
+            {
+                ahead.GetComponent<Ball>().behind = null;
+            }
+            if (behind != null)
+            {
+                behind.GetComponent<Ball>().ahead = null;
+            }
+
+            foreach (GameObject ball in balls)
+            {
+                Destroy(ball);
+            }
+
+            Destroy(this.gameObject);
+        }
+    }
 }
 
 public class Location
@@ -621,9 +666,9 @@ public class Position
     public int currentCurveIndex = 0;
     public int totalCurves;
 
-    public static float stepSize = 0.005f;
-    public static float errorSize;
-    public static float tStepSize = 0.001f;
+    public float stepSize = 0.005f;
+    public float errorSize;
+    public float tStepSize = 0.001f;
 
     public Position(Transform route)
     {

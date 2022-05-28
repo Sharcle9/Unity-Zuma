@@ -70,7 +70,7 @@ public class PlayerController : MonoBehaviour
         GameObject ball = Instantiate(BallPrefabs[ballType], this.transform.parent);
         ball.transform.rotation = this.transform.rotation;
         ball.AddComponent<Ball>();
-        ball.GetComponent<Ball>().Init(this.transform.position, mousePos, true, ballQueue, 0.42f);
+        ball.GetComponent<Ball>().Init(this.transform.position, mousePos, ballQueue, 0.42f, (BallType) ballType);
     }
 
 

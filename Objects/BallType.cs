@@ -7,6 +7,7 @@ public enum BallType
     Apple,
     Banana,
     Cherry,
+    Kiwi,
     Orange,
     Strawberry
 }

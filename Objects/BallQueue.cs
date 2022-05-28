@@ -10,8 +10,6 @@ public class BallQueue : MonoBehaviour
 
     public float speedMultiplier = 1f;
 
-    private float stepSize = 0.005f;
-    private float tStepSize = 0.001f;
     private float ballRadius = 0.42f;
 
     private PrefabController prefabController;
@@ -41,7 +39,7 @@ public class BallQueue : MonoBehaviour
         {
             GameObject ball = Instantiate(BallPrefabs[4], this.transform);
             ball.AddComponent<Ball>();
-            ball.GetComponent<Ball>().Init(0.5f, speedMultiplier, 0, stepSize, tStepSize, route, i == 0, ballRadius);
+            ball.GetComponent<Ball>().Init(0.5f, 0,  route, ballRadius, (BallType) 4);
 
             ball.GetComponent<Ball>().ahead = prevBall;
             if (ball.GetComponent<Ball>().ahead != null)
@@ -58,28 +56,39 @@ public class BallQueue : MonoBehaviour
         BallPrefabs = prefabController.BallPrefabs;
         route = prefabController.route;
 
-        GameObject ball = Instantiate(BallPrefabs[4], this.transform);
+        GameObject ball0 = GenerateBall((BallType) 0);
+
+        GameObject ball1 = GenerateBall((BallType) 1);
+
+        GameObject ball2 = GenerateBall((BallType) 2);
+
+        GameObject ball3 = GenerateBall((BallType) 3);
+
+        GameObject ball4 = GenerateBall((BallType) 4);
+
+        GameObject[] balls = { ball0, ball1, ball2, ball3, ball4 };
+
+        SetRelation(balls);
+    }
+
+    private GameObject GenerateBall(BallType ballType)
+    {
+        GameObject ball = Instantiate(BallPrefabs[(int) ballType], this.transform);
         ball.AddComponent<Ball>();
-        ball.GetComponent<Ball>().Init(0.5f, speedMultiplier, 0, stepSize, tStepSize, route, true, ballRadius);
+        ball.GetComponent<Ball>().Init(0.5f, 0, route, ballRadius, ballType);
 
-        GameObject ballAhead1 = Instantiate(BallPrefabs[5], this.transform);
-        ballAhead1.AddComponent<Ball>();
-        ballAhead1.GetComponent<Ball>().Init(0.5f, speedMultiplier, 0, stepSize, tStepSize, route, true, ballRadius);
-        ballAhead1.GetComponent<Ball>().SetLocationRelativeToBall(ball, true);
+        return ball;
+    }
 
-        GameObject ballAhead2 = Instantiate(BallPrefabs[2], this.transform);
-        ballAhead2.AddComponent<Ball>();
-        ballAhead2.GetComponent<Ball>().Init(0.5f, speedMultiplier, 0, stepSize, tStepSize, route, true, ballRadius);
-        ballAhead2.GetComponent<Ball>().SetLocationRelativeToBall(ballAhead1, true);
+    private void SetRelation(GameObject[] balls)
+    {
+        GameObject behind = null;
 
-        GameObject ballAhead3 = Instantiate(BallPrefabs[1], this.transform);
-        ballAhead3.AddComponent<Ball>();
-        ballAhead3.GetComponent<Ball>().Init(0.5f, speedMultiplier, 0, stepSize, tStepSize, route, true, ballRadius);
-        ballAhead3.GetComponent<Ball>().SetLocationRelativeToBall(ballAhead2, true);
+        for (int i = 0; i < balls.Length; i++)
+        {
+            if (behind != null) balls[i].GetComponent<Ball>().SetLocationRelativeToBall(behind, true);
 
-        GameObject ballAhead4 = Instantiate(BallPrefabs[0], this.transform);
-        ballAhead4.AddComponent<Ball>();
-        ballAhead4.GetComponent<Ball>().Init(0.5f, speedMultiplier, 0, stepSize, tStepSize, route, true, ballRadius);
-        ballAhead4.GetComponent<Ball>().SetLocationRelativeToBall(ballAhead3, true);
+            behind = balls[i];
+        }
     }
 }
