@@ -13,6 +13,10 @@ public class PrefabController
     private string ballQueueFileName = "BallQueue";
     public Transform route;
     private string routeFileName = "Path 2";
+    public GameObject player;
+    private string playerFileName = "Frog";
+    public GameObject playerController;
+    private string playerControllerFileName = "PlayerController";
 
     
     public PrefabController()
@@ -26,6 +30,7 @@ public class PrefabController
         mapController = Resources.Load(prefabFolderPath + mapControllerFileName) as GameObject;
         ballQueue = Resources.Load(prefabFolderPath + ballQueueFileName) as GameObject;
         route = (Resources.Load(prefabFolderPath + routeFileName) as GameObject).transform;
-        if (route == null) Debug.Log("NAUR");
+        player = Resources.Load(prefabFolderPath + playerFileName) as GameObject;
+        playerController = Resources.Load(prefabFolderPath + playerControllerFileName) as GameObject;
     }
 }
