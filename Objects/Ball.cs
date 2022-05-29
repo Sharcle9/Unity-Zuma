@@ -10,9 +10,11 @@ public class Ball : MonoBehaviour
     public BallType ballType = 0;
     public GameObject ahead = null;
     public GameObject behind = null;
+    public bool hasStarted = false;
     private Transform route;
     private float t;
-    public float speedMultiplier = 1f;
+    public float speedMultiplier = 0.8f;
+    public float idleSpeedMultiplier = 0.3f;
     public float shootSpeedMultiplier = 1f;
     private int currentCurveIndex = 0;
     private int totalCurves;
@@ -21,34 +23,59 @@ public class Ball : MonoBehaviour
     private float errorSize;
     private float tStepSize = 0.001f;
 
-    private float ballRadius = 0.42f;
+    public float ballRadius = 0.42f;
 
     private Vector2 mousePos;
     private Vector2 playerPos;
     private bool isShooting = false;
 
     private Transform ballQueue;
-    private bool isInQueue = true;
+    public bool isInQueue = true;
     private Transform collidingBall;
     private bool isAheadOfCollidingBall = false;
     private bool counterclockwise = true;
 
     private void Update()
     {
+        // if (!hasStarted) UpdateHasStarted();
         // if the ball is shooting from player
         if (isShooting) UpdateShootingBall();
         else
         {
+            UpdateDestroy();
             SetHeadTailStatus();
 
             // if the ball is touching the queue and rotating into the queue
             if (!isInQueue) UpdateRotatingBall();
-            else Push();
+            else
+            {
+                Push();
+                Move(idleSpeedMultiplier);
+            }
 
             if (isTail) Move(speedMultiplier);
         }
     }
 
+    private void UpdateHasStarted()
+    {
+        if (this.t != 0 || this.currentCurveIndex != 0)
+        {
+            this.hasStarted = true;
+        }
+        else if (Vector2.Distance(this.transform.position, this.ahead.transform.position) >= this.ballRadius + this.ahead.GetComponent<Ball>().ballRadius)
+        {
+            this.hasStarted = true;
+        }
+    }
+
+    private void UpdateDestroy()
+    {
+        if (this.t >= 1 && this.currentCurveIndex == this.totalCurves - 1)
+        {
+            Destroy(this.gameObject);
+        }
+    }
 
     private void UpdateShootingBall()
     {
@@ -80,7 +107,8 @@ public class Ball : MonoBehaviour
             }
 
 
-            Debug.Log(collidingBall.GetComponent<Ball>().ballType + " " + collidingBall.position);
+            // Debug.Log(collidingBall.GetComponent<Ball>().ballType + " " + collidingBall.position);
+            // Debug.Log((this.transform.position - this.collidingBall.position).magnitude);
             RotateAroundBall(collidingBall, counterclockwise);
         }
 
@@ -103,6 +131,14 @@ public class Ball : MonoBehaviour
         }
     }
 
+    private void OnDrawGizmos()
+    {
+        if (!isInQueue && !isShooting)
+        {
+            Gizmos.DrawLine(this.transform.position, this.collidingBall.position);
+        }
+    }
+
     public void Init(float t, int currentCurveIndex, Transform route, float ballRadius, BallType ballType)
     {
         this.t = t;
@@ -114,6 +150,8 @@ public class Ball : MonoBehaviour
         errorSize = stepSize / 50;
         transform.position = GetBezierPoint(t, route, currentCurveIndex);
         totalCurves = GetNumberOfCurves(route);
+
+        this.GetComponent<SpriteRenderer>().sortingOrder = 0;
     }
 
     public void Init(Vector2 playerPos, Vector2 mousePos, Transform ballQueue, float ballRadius, BallType ballType)
@@ -127,6 +165,7 @@ public class Ball : MonoBehaviour
         this.isInQueue = false;
         this.ballType = ballType;
         errorSize = stepSize / 50;
+        this.GetComponent<SpriteRenderer>().sortingOrder = 2;
     }
 
     public void Shoot()
@@ -146,13 +185,13 @@ public class Ball : MonoBehaviour
 
     public void Move(float speedMultiplier)
     {
-        if (totalCurves - currentCurveIndex - 1 == 0) return;
+        if (totalCurves - currentCurveIndex == 0) return;
 
         t = GetNextT(t, tStepSize, stepSize * speedMultiplier, errorSize, route, currentCurveIndex);
 
         transform.position = GetBezierPoint(t, route, currentCurveIndex);
 
-        if (t >= 1)
+        if (t >= 1 && currentCurveIndex < totalCurves - 1)
         {
             t = 0;
             currentCurveIndex++;
@@ -161,9 +200,9 @@ public class Ball : MonoBehaviour
     }
 
     /* Get the next t value when moving at a constant speed */
-    private float GetNextT(float currentT, float tStepSize, float stepSize, float errorSize, Transform route, int currentCurveIndex)
+    private static float GetNextT(float currentT, float tStepSize, float stepSize, float errorSize, Transform route, int currentCurveIndex)
     {
-
+        errorSize /= 5;
         Vector2 currentPoint = GetBezierPoint(currentT, route, currentCurveIndex);
         float currentDistance = Vector2.Distance(currentPoint, GetBezierPoint(currentT + tStepSize, route, currentCurveIndex));
         int count = 0;
@@ -197,7 +236,7 @@ public class Ball : MonoBehaviour
         return p0 * Mathf.Pow((1 - t), 3) + (3 * Mathf.Pow((1 - t), 2) * t * p1) + ((1 - t) * 3 * Mathf.Pow(t, 2) * p2) + p3 * Mathf.Pow(t, 3);
     }
 
-    private static Vector2 GetBezierPoint(float t, Transform route, int currentCurveIndex)
+    public static Vector2 GetBezierPoint(float t, Transform route, int currentCurveIndex)
     {
         // Debug.Log(currentCurveIndex);
         int vertex0 = currentCurveIndex * 3;
@@ -348,17 +387,7 @@ public class Ball : MonoBehaviour
             SetRotationDirection();
         }
 
-        
-        /*
-        float nextT = collidingBall.GetComponent<Ball>().t;
-        float nextSpeedMultiplier = collidingBall.GetComponent<Ball>().speedMultiplier;
-        int nextCurrentCurveIndex = collidingBall.GetComponent<Ball>().currentCurveIndex;
-        int nextCurvesRemaining = collidingBall.GetComponent<Ball>().curvesRemaining;
-        float nextStepSize = collidingBall.GetComponent<Ball>().stepSize;
-        float nextTStepSize = collidingBall.GetComponent<Ball>().tStepSize;
-        Transform nextRoute = collidingBall.GetComponent<Ball>().route;
-        Init(nextT, nextSpeedMultiplier, nextCurrentCurveIndex, nextCurvesRemaining, nextStepSize, nextTStepSize, nextRoute, ahead == null, ballRadius);
-        */
+        this.GetComponent<SpriteRenderer>().sortingOrder = 0;
     }
 
     // Rotate the current ball around the colliding ball
@@ -369,8 +398,9 @@ public class Ball : MonoBehaviour
 
         if (!counterclockwise) d *= -1;
 
-        this.transform.position = RotateAround(collidingBall.position, this.transform.position, d);
+        this.transform.position = RotateAround(collidingBall.position, this.transform.position, d, this.ballRadius + this.collidingBall.GetComponent<Ball>().ballRadius);
     }
+
 
     private float GetCurrentAngle()
     {
@@ -397,11 +427,11 @@ public class Ball : MonoBehaviour
     {
         if (counterclockwise)
         {
-            return targetAngle < shootSpeedMultiplier;
+            return targetAngle < shootSpeedMultiplier * 0.2f;
         }
         else
         {
-            return targetAngle > - shootSpeedMultiplier;
+            return targetAngle > - shootSpeedMultiplier * 0.2f;
         }
         
     }
@@ -417,9 +447,16 @@ public class Ball : MonoBehaviour
         return new Vector2(cos * tx - sin * ty, sin * tx + cos * ty);
     }
 
-    private static Vector2 RotateAround(Vector2 center, Vector2 v, float degrees)
+    private static Vector2 RotateAround(Vector2 center, Vector2 v, float degrees, float magnitude)
     {
-        return Rotate(v - center, degrees) + center;
+        return SetVectorMagnitude(Rotate(v - center, degrees), magnitude) + center;
+    }
+
+    private static Vector2 SetVectorMagnitude(Vector2 v, float magnitude)
+    {
+        float ratio = magnitude / v.magnitude;
+        v *= ratio;
+        return v;
     }
 
     private void SetRotationDirection()
@@ -519,9 +556,15 @@ public class Ball : MonoBehaviour
 
         if (aheadOfGivenBall)
         {
-            if (targetBallT + tStepSize > 1 && targetBallCurveIndex <= GetNumberOfCurves(route) - 1)
+            if (targetBallT + tStepSize > 1)
             {
-                return GetLocationRelativeToBall(targetBallPos, 0, radius, targetBallRadius, tStepSize, errorSize, route, targetBallCurveIndex + 1, aheadOfGivenBall);
+                if (targetBallCurveIndex < GetNumberOfCurves(route) - 1)
+                {
+                    return GetLocationRelativeToBall(targetBallPos, 0, radius, targetBallRadius, tStepSize, errorSize, route, targetBallCurveIndex + 1, aheadOfGivenBall);
+                } else
+                {
+                    return new Location(1, targetBallCurveIndex);
+                }
             }
             else
             {
@@ -640,7 +683,6 @@ public class Ball : MonoBehaviour
             {
                 Destroy(ball);
             }
-
             Destroy(this.gameObject);
         }
     }

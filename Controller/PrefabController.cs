@@ -12,7 +12,7 @@ public class PrefabController
     public GameObject ballQueue;
     private string ballQueueFileName = "BallQueue";
     public Transform route;
-    private string routeFileName = "Path 1";
+    private string routeFileName = "Path 2";
 
     
     public PrefabController()

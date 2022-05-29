@@ -1,11 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 public class BallQueue : MonoBehaviour
 {
     public int length = 5; 
     private Transform route;
+    private Vector2 spawnPoint;
     private GameObject[] BallPrefabs;
 
     public float speedMultiplier = 1f;
@@ -14,81 +16,75 @@ public class BallQueue : MonoBehaviour
 
     private PrefabController prefabController;
 
+    private int segmentLength;
+    private BallType ballType = 0;
+    private float radius = 0.42f;
+    private GameObject ahead = null;
+    private int totalBallCount = 0;
+
+
     private void Start()
     {
-        InitDebug();
+        Init();
     }
 
     private void Update()
     {
+        // if finished spawning or the ball ahead is too close
+        if (totalBallCount <= 0 || (ahead != null &&
+            radius + ahead.GetComponent<Ball>().ballRadius > Vector2.Distance(spawnPoint, ahead.transform.position)))
+        {
+            return;
+        }
 
+        GameObject ballObject = GenerateBall((BallType)ballType);
+        SetRelation(ballObject, ahead);
+        ahead = ballObject;
+        segmentLength--;
+        totalBallCount--;
+            
+        if (segmentLength <= 0)
+        {
+            segmentLength = Random.Range(1, 3);
+            ballType = (BallType)Random.Range(0, 5);
+        }
         
     }
 
-
     public void Init()
     {
-
         prefabController = new PrefabController();
         BallPrefabs = prefabController.BallPrefabs;
         route = prefabController.route;
-
-
-        GameObject prevBall = null;
-        for (int i = 0; i < length; i++)
-        {
-            GameObject ball = Instantiate(BallPrefabs[4], this.transform);
-            ball.AddComponent<Ball>();
-            ball.GetComponent<Ball>().Init(0.5f, 0,  route, ballRadius, (BallType) 4);
-
-            ball.GetComponent<Ball>().ahead = prevBall;
-            if (ball.GetComponent<Ball>().ahead != null)
-            {
-                ball.GetComponent<Ball>().ahead.GetComponent<Ball>().behind = ball;
-            }
-            prevBall = ball;
-        }
-    }
-
-    public void InitDebug()
-    {
-        prefabController = new PrefabController();
-        BallPrefabs = prefabController.BallPrefabs;
-        route = prefabController.route;
-
-        GameObject ball0 = GenerateBall((BallType) 0);
-
-        GameObject ball1 = GenerateBall((BallType) 1);
-
-        GameObject ball2 = GenerateBall((BallType) 2);
-
-        GameObject ball3 = GenerateBall((BallType) 3);
-
-        GameObject ball4 = GenerateBall((BallType) 4);
-
-        GameObject[] balls = { ball0, ball1, ball2, ball3, ball4 };
-
-        SetRelation(balls);
+        spawnPoint = Ball.GetBezierPoint(0, route, 0);
+        totalBallCount = 30;
+        List<GameObject> balls = new();
     }
 
     private GameObject GenerateBall(BallType ballType)
     {
         GameObject ball = Instantiate(BallPrefabs[(int) ballType], this.transform);
         ball.AddComponent<Ball>();
-        ball.GetComponent<Ball>().Init(0.5f, 0, route, ballRadius, ballType);
+        ball.GetComponent<Ball>().Init(0f, 0, route, ballRadius, ballType);
 
         return ball;
     }
 
-    private void SetRelation(GameObject[] balls)
+    private void SetRelation(List<GameObject> balls)
     {
         GameObject behind = null;
 
-        for (int i = 0; i < balls.Length; i++)
+        for (int i = 0; i < balls.Count; i++)
         {
             if (behind != null) balls[i].GetComponent<Ball>().SetLocationRelativeToBall(behind, true);
 
             behind = balls[i];
         }
+    }
+
+    private static void SetRelation(GameObject behind, GameObject ahead)
+    {
+        if (ahead != null) ahead.GetComponent<Ball>().behind = behind;
+        if (behind != null) behind.GetComponent<Ball>().ahead = ahead;
     }
 }

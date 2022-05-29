@@ -11,9 +11,10 @@ public class PlayerController : MonoBehaviour
 
     private PrefabController prefabController;
     private GameObject[] BallPrefabs;
-    private int ballType = 3;
+    public BallType ballType;
     private Vector2 mousePos;
     private Transform ballQueue;
+    private GameObject currentBallObject;
 
     // Start is called before the first frame update
     void Start()
@@ -31,7 +32,9 @@ public class PlayerController : MonoBehaviour
 
         if (Input.GetButtonDown("Fire1"))
         {
-            LaunchBall();
+            currentBallObject = LaunchBall();
+            ballType = (BallType)Random.Range(0, 5);
+            this.GetComponent<SpriteRenderer>().sprite = BallPrefabs[(int)ballType].GetComponent<SpriteRenderer>().sprite;
         }
         
     }
@@ -65,12 +68,14 @@ public class PlayerController : MonoBehaviour
         
     }
 
-    private void LaunchBall()
+    private GameObject LaunchBall()
     {
-        GameObject ball = Instantiate(BallPrefabs[ballType], this.transform.parent);
+        GameObject ball = Instantiate(BallPrefabs[(int) ballType], this.transform.parent);
         ball.transform.rotation = this.transform.rotation;
         ball.AddComponent<Ball>();
-        ball.GetComponent<Ball>().Init(this.transform.position, mousePos, ballQueue, 0.42f, (BallType) ballType);
+        ball.GetComponent<Ball>().Init(this.transform.position, mousePos, ballQueue, 0.42f, ballType);
+
+        return ball;
     }
 
 
