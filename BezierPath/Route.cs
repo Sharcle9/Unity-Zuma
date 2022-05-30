@@ -8,10 +8,8 @@ public class Route : MonoBehaviour
 {
 
     public List<GameObject> ControlPoints;
-    private List<Vector2> TargetPoints;
     public int segmentSize = 20;
     public bool showDrawing = true;
-    private string savePath = "Assets/Maps/map1.asset";
 
     // Start is called before the first frame update
     void Start()
@@ -72,41 +70,5 @@ public class Route : MonoBehaviour
     public Vector3 BezierCubicFormula(float t, Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3)
     {
         return p0 * Mathf.Pow((1 - t), 3) + (3 * Mathf.Pow((1 - t), 2) * t * p1) + ((1 - t) * 3 * Mathf.Pow(t, 2) * p2) + p3 * Mathf.Pow(t, 3);
-    }
-
-    public void CreateMapData()
-    {
-        MapData mapData = ScriptableObject.CreateInstance("MapConfig") as MapData;
-
-        foreach (var item in ControlPoints)
-        {
-            mapData.ControlPoints.Add(item);
-        }
-
-        AssetDatabase.CreateAsset(mapData, savePath);
-        AssetDatabase.SaveAssets();
-    }
-
-    public void LoadMapData()
-    {
-        MapData mapData = AssetDatabase.LoadAssetAtPath(savePath, typeof(MapData)) as MapData;
-        ControlPoints = mapData.ControlPoints;
-    }
-
-    [CustomEditor(typeof(Route))]
-    public class BezierEditor : Editor
-    {
-        public override void OnInspectorGUI()
-        {
-            base.OnInspectorGUI();
-            if (GUILayout.Button("Generate Map"))
-            {
-                (target as Route).CreateMapData();
-            }
-            if (GUILayout.Button("Load Map"))
-            {
-                (target as Route).LoadMapData();
-            }
-        }
     }
 }

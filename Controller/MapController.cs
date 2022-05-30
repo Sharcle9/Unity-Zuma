@@ -26,14 +26,4 @@ public class MapController : MonoBehaviour
         playerController.GetComponent<PlayerController>().SetBallQueue(ballQueue.transform);
     }
 
-    private void Update()
-    {
-
-    }
-
-    public void GenerateQueue(int count)
-    {
-        BallQueue ballQueue = gameObject.AddComponent<BallQueue>();
-    }
-
 }
