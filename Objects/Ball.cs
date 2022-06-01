@@ -7,10 +7,10 @@ public class Ball : MonoBehaviour
     public GameObject prefab;
     public bool isHead = false;
     public bool isTail = false;
+    public bool hasGapBehind = false;
     public BallType ballType = 0;
     public GameObject ahead = null;
     public GameObject behind = null;
-    public bool hasStarted = false;
     private Transform route;
     private float t;
     public float speedMultiplier = 0.8f;
@@ -47,25 +47,13 @@ public class Ball : MonoBehaviour
 
             // if the ball is touching the queue and rotating into the queue
             if (!isInQueue) UpdateRotatingBall();
-            else
-            {
-                Push();
-                Move(idleSpeedMultiplier);
-            }
+            else Push();
+                
+            // if the ball is tail of one piece but not the whole queue
+            if (hasGapBehind) Move(idleSpeedMultiplier);
+            
 
             if (isTail) Move(speedMultiplier);
-        }
-    }
-
-    private void UpdateHasStarted()
-    {
-        if (this.t != 0 || this.currentCurveIndex != 0)
-        {
-            this.hasStarted = true;
-        }
-        else if (Vector2.Distance(this.transform.position, this.ahead.transform.position) >= this.ballRadius + this.ahead.GetComponent<Ball>().ballRadius)
-        {
-            this.hasStarted = true;
         }
     }
 
@@ -288,33 +276,38 @@ public class Ball : MonoBehaviour
 
     private void SetHeadTailStatus()
     {
+        // if the ball is shooting from player, return
         if (!isInQueue)
         {
             this.isHead = false;
             this.isTail = false;
+            this.hasGapBehind = false;
             return;
         }
+
+        // if there is a ball that is not currently joining the queue behind, not tail
         if (this.behind != null)
         {
             Ball behind = this.behind.GetComponent<Ball>();
 
             this.isTail = (behind.behind == null && !behind.isInQueue);
-        } 
-        else
-        {
-            this.isTail = true;
-        }
 
+            if (!this.isTail)
+            {
+                float distance = Vector2.Distance(this.transform.position, this.behind.transform.position);
+                this.hasGapBehind = distance > this.ballRadius + behind.ballRadius + 0.01f;
+            }
+        } 
+        else this.isTail = true;
+
+        // if there is a ball that is not currently joining the queue ahead, not head
         if (this.ahead != null) 
         {
             Ball ahead = this.ahead.GetComponent<Ball>();
 
             this.isHead = (ahead.ahead == null && !ahead.isInQueue);
         }
-        else
-        {
-            this.isHead = true;
-        }
+        else this.isHead = true;
     }
 
     private Transform IsTouchingQueue()
