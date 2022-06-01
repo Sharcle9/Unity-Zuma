@@ -632,7 +632,8 @@ public class Ball : MonoBehaviour
         // iterate behind
         GameObject behind = this.behind;
 
-        if (behind != null)
+        if (behind != null && Vector2.Distance(this.transform.position, behind.GetComponent<Ball>().transform.position) 
+            <= this.ballRadius + behind.GetComponent<Ball>().ballRadius + 0.01f)
         {
             bool gap = false;
             do
@@ -651,7 +652,8 @@ public class Ball : MonoBehaviour
         // iterate ahead
         GameObject ahead = this.ahead;
 
-        if (ahead != null)
+        if (ahead != null && Vector2.Distance(this.transform.position, ahead.GetComponent<Ball>().transform.position)
+            <= this.ballRadius + ahead.GetComponent<Ball>().ballRadius + 0.01f)
         {
             do
             {
