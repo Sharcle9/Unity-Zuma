@@ -634,12 +634,15 @@ public class Ball : MonoBehaviour
 
         if (behind != null)
         {
+            bool gap = false;
             do
             {
-                if (behind.GetComponent<Ball>().ballType != this.ballType) break;
+                Ball behindBall = behind.GetComponent<Ball>();
+                if (behindBall.ballType != this.ballType || gap) break;
                 
                 balls.Add(behind);
-                behind = behind.GetComponent<Ball>().behind;
+                gap = behindBall.hasGapBehind;
+                behind = behindBall.behind;
             } 
             while (behind != null);
         }
@@ -652,10 +655,11 @@ public class Ball : MonoBehaviour
         {
             do
             {
-                if (ahead.GetComponent<Ball>().ballType != this.ballType) break;
+                Ball aheadBall = ahead.GetComponent<Ball>();
+                if (aheadBall.ballType != this.ballType || aheadBall.hasGapBehind) break;
 
                 balls.Add(ahead);
-                ahead = ahead.GetComponent<Ball>().ahead;
+                ahead = aheadBall.ahead;
             }
             while (ahead != null);
         }
