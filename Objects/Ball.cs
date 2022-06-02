@@ -13,7 +13,7 @@ public class Ball : MonoBehaviour
     public GameObject behind = null;
     private Transform route;
     private float t;
-    public float speedMultiplier = 0.8f;
+    public float speedMultiplier = 0.9f;
     public float idleSpeedMultiplier = 0.3f;
     public float shootSpeedMultiplier = 1f;
     private int currentCurveIndex = 0;
@@ -36,6 +36,15 @@ public class Ball : MonoBehaviour
     private bool counterclockwise = true;
 
     private void Update()
+    {
+
+        Update1();
+        if (Input.GetMouseButtonDown(1))
+        {
+        }
+    }
+
+    private void Update1()
     {
         // if (!hasStarted) UpdateHasStarted();
         // if the ball is shooting from player
@@ -190,7 +199,6 @@ public class Ball : MonoBehaviour
     /* Get the next t value when moving at a constant speed */
     private static float GetNextT(float currentT, float tStepSize, float stepSize, float errorSize, Transform route, int currentCurveIndex)
     {
-        errorSize /= 5;
         Vector2 currentPoint = GetBezierPoint(currentT, route, currentCurveIndex);
         float currentDistance = Vector2.Distance(currentPoint, GetBezierPoint(currentT + tStepSize, route, currentCurveIndex));
         int count = 0;
@@ -219,6 +227,35 @@ public class Ball : MonoBehaviour
         return currentT + tStepSize;
     }
 
+    private static float GetPrevT(float currentT, float tStepSize, float stepSize, float errorSize, Transform route, int currentCurveIndex)
+    {
+        errorSize /= 5;
+        Vector2 currentPoint = GetBezierPoint(currentT, route, currentCurveIndex);
+        float currentDistance = Vector2.Distance(currentPoint, GetBezierPoint(currentT + tStepSize, route, currentCurveIndex));
+        int count = 0;
+
+        while (currentDistance < stepSize)
+        {
+            tStepSize *= 2;
+            currentDistance = Vector2.Distance(currentPoint, GetBezierPoint(currentT + tStepSize, route, currentCurveIndex));
+            count++;
+        }
+
+        float deltaT = 0.5f * tStepSize;
+        // binary search
+        while (currentDistance < stepSize - errorSize || currentDistance > stepSize + errorSize)
+        {
+            if (currentDistance < stepSize) tStepSize += deltaT;
+            else tStepSize -= deltaT;
+
+            currentDistance = Vector2.Distance(currentPoint, GetBezierPoint(currentT + tStepSize, route, currentCurveIndex));
+            deltaT *= 0.5f;
+            count++;
+        }
+
+        return currentT + tStepSize;
+    }
+
     private static Vector2 GetBezierPoint(float t, Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3)
     {
         return p0 * Mathf.Pow((1 - t), 3) + (3 * Mathf.Pow((1 - t), 2) * t * p1) + ((1 - t) * 3 * Mathf.Pow(t, 2) * p2) + p3 * Mathf.Pow(t, 3);
@@ -240,14 +277,21 @@ public class Ball : MonoBehaviour
             < ball1.GetComponent<Ball>().ballRadius + ball2.GetComponent<Ball>().ballRadius;
     }
 
+    // if the ball has a new gap behind and the ball behind has the same color, fall back
+    private void MagnetBack()
+    {
+        
+    }
+
     private void Push()
     {
         if (this.behind == null) return;
 
         Vector2 ballBehindPos = this.behind.transform.position;
         float distance = Vector2.Distance(ballBehindPos, this.transform.position);
+        float radiiSum = this.ballRadius + this.behind.GetComponent<Ball>().ballRadius;
 
-        if (distance < this.ballRadius + this.behind.GetComponent<Ball>().ballRadius)
+        if (distance < radiiSum)
         {
             Location location = GetLocationRelativeToBall(ballBehindPos,
                 this.t,
@@ -632,12 +676,16 @@ public class Ball : MonoBehaviour
         // iterate behind
         GameObject behind = this.behind;
 
-        if (behind != null && Vector2.Distance(this.transform.position, behind.GetComponent<Ball>().transform.position) 
-            <= this.ballRadius + behind.GetComponent<Ball>().ballRadius + 0.01f)
+        Debug.Log("Behind: ");
+        /* Vector2.Distance(this.transform.position, behind.GetComponent<Ball>().transform.position) 
+            <= this.ballRadius + behind.GetComponent<Ball>().ballRadius + 0.02f */
+        if (behind != null)
         {
-            bool gap = false;
+            bool gap = this.hasGapBehind;
             do
             {
+
+                Debug.Log(1 + ": " + gap);
                 Ball behindBall = behind.GetComponent<Ball>();
                 if (behindBall.ballType != this.ballType || gap) break;
                 
@@ -651,13 +699,17 @@ public class Ball : MonoBehaviour
 
         // iterate ahead
         GameObject ahead = this.ahead;
-
-        if (ahead != null && Vector2.Distance(this.transform.position, ahead.GetComponent<Ball>().transform.position)
-            <= this.ballRadius + ahead.GetComponent<Ball>().ballRadius + 0.01f)
+        if(ahead != null)
+        Debug.Log("Ahead: " + Vector2.Distance(this.transform.position, ahead.GetComponent<Ball>().transform.position));
+        /* Vector2.Distance(this.transform.position, ahead.GetComponent<Ball>().transform.position)
+            <= this.ballRadius + ahead.GetComponent<Ball>().ballRadius + 0.02f */
+        if (ahead != null)
         {
             do
             {
                 Ball aheadBall = ahead.GetComponent<Ball>();
+
+                Debug.Log(2 + ": " + aheadBall.hasGapBehind);
                 if (aheadBall.ballType != this.ballType || aheadBall.hasGapBehind) break;
 
                 balls.Add(ahead);
@@ -665,6 +717,9 @@ public class Ball : MonoBehaviour
             }
             while (ahead != null);
         }
+
+
+        Debug.Log(balls.Count);
 
 
         if (balls.Count >= 2)
@@ -684,6 +739,8 @@ public class Ball : MonoBehaviour
             }
             Destroy(this.gameObject);
         }
+
+        if (ahead != null) ahead.GetComponent<Ball>().SetHeadTailStatus();
     }
 }
 
